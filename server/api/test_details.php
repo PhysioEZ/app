@@ -46,8 +46,14 @@ if (!$branchId) {
         exit;
     }
 
-    // 1. Fetch Header
-    $stmt = $pdo->prepare("SELECT * FROM tests WHERE test_id = ? AND branch_id = ?");
+    // 1. Fetch Header with all fields
+    $stmt = $pdo->prepare("
+        SELECT 
+            t.*,
+            TIMESTAMPDIFF(YEAR, t.dob, CURDATE()) as age
+        FROM tests t 
+        WHERE t.test_id = ? AND t.branch_id = ?
+    ");
     $stmt->execute([$testId, $branchId]);
     $header = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -57,21 +63,42 @@ if (!$branchId) {
         exit();
     }
 
-    // 2. Fetch Items
-    $stmtItems = $pdo->prepare("SELECT * FROM test_items WHERE test_id = ? ORDER BY item_id ASC");
+    // 2. Fetch Items with all details
+    $stmtItems = $pdo->prepare("
+        SELECT 
+            item_id,
+            test_name,
+            limb,
+            assigned_test_date,
+            test_done_by,
+            referred_by,
+            total_amount,
+            discount,
+            advance_amount,
+            due_amount,
+            payment_method,
+            test_status,
+            payment_status,
+            created_at
+        FROM test_items 
+        WHERE test_id = ? 
+        ORDER BY item_id ASC
+    ");
     $stmtItems->execute([$testId]);
     $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
 
-    // Format
+    // Format numeric fields
     $header['total_amount'] = (float)$header['total_amount'];
     $header['advance_amount'] = (float)$header['advance_amount'];
     $header['due_amount'] = (float)$header['due_amount'];
     $header['discount'] = (float)($header['discount'] ?? 0);
+    $header['age'] = (int)($header['age'] ?? 0);
 
     foreach ($items as &$item) {
         $item['total_amount'] = (float)$item['total_amount'];
         $item['advance_amount'] = (float)$item['advance_amount'];
         $item['due_amount'] = (float)$item['due_amount'];
+        $item['discount'] = (float)($item['discount'] ?? 0);
     }
 
     $header['items'] = $items;

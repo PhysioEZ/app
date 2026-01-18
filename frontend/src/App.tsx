@@ -18,6 +18,7 @@ import { ExpensesScreen } from './screens/Expenses/ExpensesScreen';
 import { SupportScreen } from './screens/Support/SupportScreen';
 import { AboutScreen } from './screens/About/AboutScreen';
 import { FeedbackScreen } from './screens/Feedback/FeedbackScreen';
+import { NotificationsScreen } from './screens/Notifications/NotificationsScreen';
 import { AppLayout } from './components/Layout';
 import { AdminLayout } from './components/Layout/AdminLayout';
 import ComingSoon from './components/ComingSoon';
@@ -176,6 +177,7 @@ function App() {
           <Route path="/support" element={<SupportScreen />} />
           <Route path="/about" element={<AboutScreen />} />
           <Route path="/feedback" element={<FeedbackScreen />} />
+          <Route path="/notifications" element={<NotificationsScreen />} />
           <Route path="/menu-placeholder" element={<ComingSoonWrapper />} />
         </Route>
 

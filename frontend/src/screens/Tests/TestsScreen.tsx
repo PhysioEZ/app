@@ -290,7 +290,7 @@ export const TestsScreen = () => {
                   <div>
                       <h2 className="text-xl font-bold text-on-surface dark:text-white">Test Details</h2>
                       <p className="text-xs text-outline dark:text-gray-400 flex items-center gap-1">
-                          #{detailData?.test_uid || detailData?.test_id} • {detailData?.created_at ? new Date(detailData.created_at).toLocaleDateString() : '...'}
+                          #{detailData?.test_uid || detailData?.test_id} • {detailData?.created_at ? new Date(detailData.created_at).toLocaleDateString('en-IN') : '...'}
                       </p>
                   </div>
                   <button onClick={() => setSelectedTestId(null)} className="p-2 rounded-full bg-surface-variant/50 hover:bg-surface-variant dark:bg-gray-800 text-on-surface dark:text-white"><MdClose size={20} /></button>
@@ -313,6 +313,11 @@ export const TestsScreen = () => {
                                  <div className="flex items-center gap-2 mt-1 opacity-80">
                                     <MdPhone size={12} /> <span className="text-xs">{detailData.phone_number}</span>
                                  </div>
+                                 {detailData.alternate_phone_no && (
+                                    <div className="flex items-center gap-2 mt-0.5 opacity-70">
+                                       <MdPhone size={10} /> <span className="text-[10px]">Alt: {detailData.alternate_phone_no}</span>
+                                    </div>
+                                 )}
                               </div>
                               <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center">
                                  <MdScience size={20} />
@@ -335,6 +340,130 @@ export const TestsScreen = () => {
                            </div>
                         </div>
 
+                        {/* Patient Info Card */}
+                        <div className="bg-surface dark:bg-gray-800 rounded-[24px] p-5 shadow-sm border border-outline-variant/10 dark:border-gray-700">
+                           <h3 className="text-xs font-bold text-outline dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                              <MdPerson size={16} /> Patient Information
+                           </h3>
+                           <div className="grid grid-cols-2 gap-3 text-xs">
+                              <div>
+                                 <p className="text-[10px] font-bold text-outline dark:text-gray-500 uppercase mb-1">Age</p>
+                                 <p className="text-sm font-bold text-on-surface dark:text-white">{detailData.age || 'N/A'} years</p>
+                              </div>
+                              <div>
+                                 <p className="text-[10px] font-bold text-outline dark:text-gray-500 uppercase mb-1">Gender</p>
+                                 <p className="text-sm font-bold text-on-surface dark:text-white capitalize">{detailData.gender || 'N/A'}</p>
+                              </div>
+                              {detailData.dob && (
+                                 <div className="col-span-2">
+                                    <p className="text-[10px] font-bold text-outline dark:text-gray-500 uppercase mb-1">Date of Birth</p>
+                                    <p className="text-sm font-bold text-on-surface dark:text-white">{new Date(detailData.dob).toLocaleDateString('en-IN')}</p>
+                                 </div>
+                              )}
+                              {detailData.parents && (
+                                 <div className="col-span-2">
+                                    <p className="text-[10px] font-bold text-outline dark:text-gray-500 uppercase mb-1">Parents/Guardian</p>
+                                    <p className="text-sm font-bold text-on-surface dark:text-white">{detailData.parents} {detailData.relation && `(${detailData.relation})`}</p>
+                                 </div>
+                              )}
+                           </div>
+                        </div>
+
+                        {/* Status Toggles */}
+                        <div className="bg-surface dark:bg-gray-800 rounded-[24px] p-5 shadow-sm border border-outline-variant/10 dark:border-gray-700">
+                           <h3 className="text-xs font-bold text-outline dark:text-gray-400 uppercase tracking-wider mb-4">Status Management</h3>
+                           
+                           {/* Test Status */}
+                           <div className="mb-4">
+                              <p className="text-[10px] font-bold text-outline dark:text-gray-500 uppercase mb-2">Test Status</p>
+                              <div className="flex gap-2">
+                                 {['pending', 'completed', 'cancelled'].map((status) => (
+                                    <button
+                                       key={status}
+                                       onClick={async () => {
+                                          if (detailData.test_status === status) return;
+                                          try {
+                                             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://prospine.in/admin/mobile/api';
+                                             const res = await fetch(`${baseUrl}/update_test_status.php`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                   test_id: selectedTestId,
+                                                   branch_id: user?.branch_id || 1,
+                                                   employee_id: user?.employee_id || '',
+                                                   update_type: 'test_status',
+                                                   new_value: status
+                                                })
+                                             });
+                                             const json = await res.json();
+                                             if (json.status === 'success') {
+                                                setDetailData({...detailData, test_status: status});
+                                                fetchTests(); // Refresh list
+                                             }
+                                          } catch (err) {
+                                             console.error(err);
+                                          }
+                                       }}
+                                       className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold uppercase transition-all ${
+                                          detailData.test_status === status 
+                                             ? status === 'completed' ? 'bg-green-500 text-white' :
+                                               status === 'cancelled' ? 'bg-red-500 text-white' :
+                                               'bg-amber-500 text-white'
+                                             : 'bg-surface-variant/50 dark:bg-gray-700 text-outline dark:text-gray-400 hover:bg-surface-variant'
+                                       }`}
+                                    >
+                                       {status}
+                                    </button>
+                                 ))}
+                              </div>
+                           </div>
+
+                           {/* Payment Status */}
+                           <div>
+                              <p className="text-[10px] font-bold text-outline dark:text-gray-500 uppercase mb-2">Payment Status</p>
+                              <div className="flex gap-2">
+                                 {['pending', 'partial', 'paid'].map((status) => (
+                                    <button
+                                       key={status}
+                                       onClick={async () => {
+                                          if (detailData.payment_status === status) return;
+                                          try {
+                                             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://prospine.in/admin/mobile/api';
+                                             const res = await fetch(`${baseUrl}/update_test_status.php`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                   test_id: selectedTestId,
+                                                   branch_id: user?.branch_id || 1,
+                                                   employee_id: user?.employee_id || '',
+                                                   update_type: 'payment_status',
+                                                   new_value: status
+                                                })
+                                             });
+                                             const json = await res.json();
+                                             if (json.status === 'success') {
+                                                setDetailData({...detailData, payment_status: status});
+                                                fetchTests(); // Refresh list
+                                             }
+                                          } catch (err) {
+                                             console.error(err);
+                                          }
+                                       }}
+                                       className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold uppercase transition-all ${
+                                          detailData.payment_status === status 
+                                             ? status === 'paid' ? 'bg-green-500 text-white' :
+                                               status === 'partial' ? 'bg-amber-500 text-white' :
+                                               'bg-red-500 text-white'
+                                             : 'bg-surface-variant/50 dark:bg-gray-700 text-outline dark:text-gray-400 hover:bg-surface-variant'
+                                       }`}
+                                    >
+                                       {status}
+                                    </button>
+                                 ))}
+                              </div>
+                           </div>
+                        </div>
+
                         {/* Test Items */}
                         <div>
                            <h3 className="text-xs font-bold text-outline dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -345,14 +474,41 @@ export const TestsScreen = () => {
                                {detailData.items?.map((item) => (
                                    <div key={item.item_id} className="bg-surface dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-outline-variant/10 dark:border-gray-700 relative overflow-hidden group">
                                        <div className="flex justify-between items-start mb-3 border-b border-outline-variant/10 dark:border-gray-700 pb-2">
-                                           <h4 className="font-bold text-on-surface dark:text-white flex-1 text-sm">{item.test_name}</h4>
+                                           <h4 className="font-bold text-on-surface dark:text-white flex-1 text-sm">{item.test_name} {item.limb && <span className="text-xs text-outline">({item.limb})</span>}</h4>
                                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg flex items-center gap-1 ${getStatusColor(item.test_status)}`}>
                                                {getStatusIcon(item.test_status)} {item.test_status}
                                            </span>
                                        </div>
                                        <div className="grid grid-cols-2 gap-y-2 text-xs text-outline dark:text-gray-500 mb-3">
                                            <div className="flex items-center gap-1.5"><MdCalendarToday size={12}/> {item.assigned_test_date}</div>
-                                           <div className="flex items-center gap-1.5"><MdPerson size={12}/> By: {item.test_done_by}</div>
+                                           <div className="flex items-center gap-1.5"><MdPerson size={12}/> {item.test_done_by}</div>
+                                           {item.referred_by && (
+                                              <div className="col-span-2 flex items-center gap-1.5 text-[11px]">
+                                                 <MdPerson size={12}/> Referred by: <span className="font-bold">{item.referred_by}</span>
+                                              </div>
+                                           )}
+                                           {item.payment_method && (
+                                              <div className="col-span-2 flex items-center gap-1.5 text-[11px]">
+                                                 Payment: <span className="font-bold uppercase">{item.payment_method}</span>
+                                              </div>
+                                           )}
+                                       </div>
+                                       <div className="flex justify-between items-center pt-2 border-t border-outline-variant/10 dark:border-gray-700">
+                                          <div className="flex gap-3 text-xs">
+                                             <div>
+                                                <p className="text-[9px] text-outline dark:text-gray-500 uppercase">Amount</p>
+                                                <p className="font-bold text-on-surface dark:text-white">{formatCurrency(item.total_amount)}</p>
+                                             </div>
+                                             {item.discount > 0 && (
+                                                <div>
+                                                   <p className="text-[9px] text-outline dark:text-gray-500 uppercase">Discount</p>
+                                                   <p className="font-bold text-green-600 dark:text-green-400">{formatCurrency(item.discount)}</p>
+                                                </div>
+                                             )}
+                                          </div>
+                                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${getStatusColor(item.payment_status)}`}>
+                                             {item.payment_status}
+                                          </span>
                                        </div>
                                    </div>
                                ))}

@@ -84,6 +84,24 @@ try {
                 $stmt->execute([$employeeId]);
                  echo json_encode(['status' => 'success', 'message' => 'All marked as read']);
             }
+        } elseif ($action === 'delete') {
+            $notifId = $input['notification_id'] ?? 0;
+            if ($notifId) {
+                $stmt = $pdo->prepare("DELETE FROM notifications WHERE notification_id = ?");
+                $stmt->execute([$notifId]);
+                echo json_encode(['status' => 'success', 'message' => 'Notification deleted']);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Notification ID missing']);
+            }
+        } elseif ($action === 'delete_all') {
+            $employeeId = $input['employee_id'] ?? 0;
+            if ($employeeId) {
+                $stmt = $pdo->prepare("DELETE FROM notifications WHERE employee_id = ?");
+                $stmt->execute([$employeeId]);
+                echo json_encode(['status' => 'success', 'message' => 'All notifications deleted']);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Employee ID missing']);
+            }
         }
     }
 

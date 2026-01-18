@@ -12,6 +12,7 @@ import {
     MdBiotech, 
     MdSupportAgent,
     MdFeedback,
+    MdNotifications,
     MdInfo,
     MdChevronRight,
     MdLogout,
@@ -36,6 +37,12 @@ const MenuScreen: React.FC = () => {
     };
 
     const menuItems = [
+        { 
+            id: 'notifications', 
+            label: 'Notifications', 
+            icon: <MdNotifications size={24} />, 
+            link: '/notifications'
+        },
         { 
             id: 'inquiry', 
             label: 'Inquiry', 
