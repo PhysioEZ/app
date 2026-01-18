@@ -2,93 +2,82 @@ import * as React from 'react';
 
 const SplashScreen: React.FC = () => {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white overflow-hidden font-sans">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-surface overflow-hidden font-sans select-none">
       
-      {/* Background Ambience - Light Aurora Effect */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-teal-200/30 rounded-full blur-[100px] animate-pulse-slow" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[700px] h-[700px] bg-indigo-200/30 rounded-full blur-[120px] animate-pulse-slow delay-1000" />
+      {/* Background Ambience - M3 Dynamic Blobs */}
+      <div className="absolute inset-0 z-0 opacity-40">
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-primary-container rounded-full blur-[80px] animate-blob mix-blend-multiply" />
+        <div className="absolute top-[20%] right-[-20%] w-[400px] h-[400px] bg-secondary-container rounded-full blur-[80px] animate-blob animation-delay-2000 mix-blend-multiply" />
+        <div className="absolute bottom-[-20%] left-[20%] w-[600px] h-[600px] bg-tertiary-container rounded-full blur-[100px] animate-blob animation-delay-4000 mix-blend-multiply" />
       </div>
 
       {/* Main Content Container */}
       <div className="relative z-10 flex flex-col items-center">
         
-        {/* Animated Brand Symbol */}
-        <div className="mb-12 relative group">
-          <div className="relative w-24 h-24 flex items-center justify-center">
+        {/* Brand Icon - Scale In Entrance */}
+        <div className="mb-8 relative animate-scale-in origin-center">
+          <div className="relative w-28 h-28 flex items-center justify-center">
              {/* Center Glow */}
-             <div className="absolute inset-0 bg-teal-400/20 rounded-full blur-2xl animate-pulse" />
+             <div className="absolute inset-0 bg-primary-container/60 rounded-full blur-2xl animate-pulse-slow" />
              
-             {/* The Icon: Rotating Dots Container */}
-             <div className="relative grid grid-cols-2 gap-2 animate-spin-slow">
-                {/* Dot 1 - Top Left */}
-                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-teal-500 to-emerald-400 shadow-lg shadow-teal-500/30"></div>
-                {/* Dot 2 - Top Right */}
-                <div className="w-5 h-5 rounded-full bg-slate-300"></div>
-                {/* Dot 3 - Bottom Left */}
-                <div className="w-5 h-5 rounded-full bg-slate-300"></div>
-                {/* Dot 4 - Bottom Right */}
-                <div className="w-5 h-5 rounded-full bg-gradient-to-bl from-teal-600 to-cyan-500 shadow-lg shadow-teal-500/30"></div>
+             {/* The Icon: Rotating M3 Shapes */}
+             <div className="relative grid grid-cols-2 gap-3 animate-spin-slow">
+                {/* Shape 1 - Top Left (Primary) */}
+                <div className="w-6 h-6 rounded-2xl rounded-tl-lg bg-primary shadow-lg shadow-primary/20 animate-[spin_3s_linear_infinite]"></div>
+                {/* Shape 2 - Top Right (Surface Variant) */}
+                <div className="w-6 h-6 rounded-2xl rounded-tr-lg bg-surface-variant border border-white/50 animate-[spin_4s_linear_infinite_reverse]"></div>
+                {/* Shape 3 - Bottom Left (Secondary Container) */}
+                <div className="w-6 h-6 rounded-2xl rounded-bl-lg bg-secondary-container border border-white/50 animate-[spin_4s_linear_infinite]"></div>
+                {/* Shape 4 - Bottom Right (Tertiary) */}
+                <div className="w-6 h-6 rounded-2xl rounded-br-lg bg-tertiary shadow-lg shadow-tertiary/20 animate-[spin_3s_linear_infinite_reverse]"></div>
              </div>
           </div>
         </div>
 
-        {/* Typography - Modern Dark on Light */}
-        <div className="text-center space-y-2">
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-slate-800 drop-shadow-sm">
-            CareSync<span className="font-light text-teal-600">OS</span>
+        {/* Typography - Staggered Reveal */}
+        <div className="text-center space-y-3 animate-slide-up" style={{ animationDelay: '200ms' }}>
+          <h1 className="text-5xl md:text-6xl font-normal tracking-tight text-on-surface drop-shadow-sm">
+            <span className="text-primary">Physio</span> <span className="font-light text-black">EZ</span>
           </h1>
           
-          <div className="h-px w-20 bg-gradient-to-r from-transparent via-slate-300 to-transparent mx-auto my-6"></div>
+          <div className="h-1 w-16 bg-gradient-to-r from-primary-container via-primary to-primary-container rounded-full mx-auto my-6 opacity-80"></div>
 
-          <p className="text-sm md:text-base font-semibold text-slate-500 tracking-[0.3em] uppercase">
+          <p className="text-sm md:text-base font-medium text-on-surface-variant tracking-[0.2em] uppercase">
             Next Gen Medical System
           </p>
         </div>
 
-        {/* Loading Indicator - Teal Gradient Line */}
-        <div className="mt-14 w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-          <div className="h-full bg-gradient-to-r from-teal-500 via-emerald-400 to-cyan-500 animate-loading-bar rounded-full"></div>
+        {/* M3 Linear Progress Indicator */}
+        <div className="mt-16 w-48 h-1 bg-surface-variant rounded-full overflow-hidden animate-fade-in" style={{ animationDelay: '400ms' }}>
+          <div className="h-full bg-primary animate-[loading-bar_1.5s_ease-in-out_infinite] rounded-full origin-left"></div>
         </div>
 
       </div>
 
       {/* Footer Section */}
-      <div className="absolute bottom-10 left-0 right-0 flex flex-col items-center space-y-3">
+      <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center space-y-4 animate-fade-in" style={{ animationDelay: '600ms' }}>
          {/* Version Pill */}
-         <span className="px-3 py-1 rounded-full border border-slate-200 bg-white/50 text-[11px] font-mono text-slate-400 tracking-wider backdrop-blur-sm shadow-sm">
+         <span className="px-4 py-1.5 rounded-full bg-surface-variant/50 text-on-surface-variant text-[12px] font-medium tracking-wider backdrop-blur-md border border-outline-variant/20">
            v2.5.0
          </span>
 
-         {/* Author Credit - Stylized Gradient */}
-         <p className="text-sm font-medium tracking-wide">
-           <span className="text-slate-400">Created by </span>
-           <span className="bg-gradient-to-r from-teal-600 via-emerald-600 to-indigo-600 bg-clip-text text-transparent font-bold">
-             Sumit Srivastava
-           </span>
+         {/* Author Credit */}
+         <p className="text-sm text-on-surface-variant font-medium">
+           Created by <span className="text-primary font-bold">Sumit Srivastava</span>
          </p>
       </div>
-      
+
+      {/* Custom Keyframes for non-tailwind animations specific to this component */}
       <style>{`
         @keyframes loading-bar {
-          0% { width: 0%; transform: translateX(-100%); opacity: 0; }
-          40% { width: 60%; transform: translateX(0); opacity: 1; }
-          100% { width: 100%; transform: translateX(100%); opacity: 0; }
+          0% { width: 0%; margin-left: 0; }
+          50% { width: 70%; margin-left: 30%; }
+          100% { width: 0%; margin-left: 100%; }
         }
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .animate-loading-bar {
-          animation: loading-bar 2s infinite ease-in-out;
-        }
-        .animate-spin-slow {
-          animation: spin-slow 3s linear infinite;
-        }
-        .animate-pulse-slow {
-          animation: pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
+        .animation-delay-2000 { animation-delay: 2s; }
+        .animation-delay-4000 { animation-delay: 4s; }
       `}</style>
+      
     </div>
   );
 };

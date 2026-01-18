@@ -9,6 +9,7 @@ interface User {
   token: string;
   branch_id?: number;
   employee_id?: number;
+  photo?: string;
 }
 
 interface AuthState {

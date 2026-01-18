@@ -16,7 +16,23 @@ $response = [
     'status' => 'success',
     'data' => [
         'releases' => [
-            // LATEST RELEASE (v2.5.0)
+            // LATEST RELEASE (v3.0.0)
+            [
+                'version' => '3.0.0',
+                'date' => 'Jan 18, 2026',
+                'description' => 'Complete Material Design 3 UI Overhaul: Premium card-based layouts, enhanced visual hierarchy, and comprehensive dark mode support across all screens.',
+                'features' => [
+                    ['title' => 'Material Design 3', 'desc' => 'Complete UI redesign with Google Material You design system'],
+                    ['title' => 'Reports Screen', 'desc' => 'Premium gradient cards, interactive charts & trend analysis'],
+                    ['title' => 'Expenses Screen', 'desc' => 'Card-based layout with status indicators & budget tracking'],
+                    ['title' => 'Feedback Screen', 'desc' => 'Stats cards, satisfaction metrics & clean form design'],
+                    ['title' => 'Support Center', 'desc' => 'Ticket management with card-based UI & image viewer'],
+                    ['title' => 'Patient Profile', 'desc' => 'Redesigned Details tab with premium card structure'],
+                    ['title' => 'User Profile', 'desc' => 'Enhanced layout with contact cards & branch info'],
+                    ['title' => 'Icon System', 'desc' => 'Migrated to Material Design Icons (react-icons/md)'],
+                ]
+            ],
+            // PREVIOUS RELEASE (v2.5.0)
             [
                 'version' => '2.5.0',
                 'date' => 'Dec 21, 2025',
@@ -29,7 +45,7 @@ $response = [
                     ['title' => 'Premium UI', 'desc' => 'A stunning Glassmorphism design system in Violet & Teal'],
                 ]
             ],
-            // PREVIOUS RELEASE (v1.0.0 - Restored)
+            // INITIAL RELEASE (v1.0.0)
             [
                 'version' => '1.0.0',
                 'date' => 'Nov 01, 2025',
