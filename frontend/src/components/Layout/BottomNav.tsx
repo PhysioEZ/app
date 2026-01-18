@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, CalendarDays, Menu, MessageCircle } from 'lucide-react';
+import { MdDashboard, MdChat, MdCalendarMonth, MdPeople, MdMenu } from 'react-icons/md';
 
 const BottomNav: React.FC = () => {
   return (
@@ -14,7 +14,7 @@ const BottomNav: React.FC = () => {
             }`
           }
         >
-          <LayoutDashboard size={24} strokeWidth={2} />
+          <MdDashboard size={24} />
           <span className="text-[10px] font-medium">Home</span>
         </NavLink>
 
@@ -26,7 +26,7 @@ const BottomNav: React.FC = () => {
             }`
           }
         >
-          <MessageCircle size={24} strokeWidth={2} />
+          <MdChat size={24} />
           <span className="text-[10px] font-medium">Chat</span>
         </NavLink>
 
@@ -38,7 +38,7 @@ const BottomNav: React.FC = () => {
             }`
           }
         >
-          <CalendarDays size={24} strokeWidth={2} />
+          <MdCalendarMonth size={24} />
           <span className="text-[10px] font-medium">Schedule</span>
         </NavLink>
 
@@ -50,7 +50,7 @@ const BottomNav: React.FC = () => {
             }`
           }
         >
-          <Users size={24} strokeWidth={2} />
+          <MdPeople size={24} />
           <span className="text-[10px] font-medium">Patients</span>
         </NavLink>
 
@@ -62,7 +62,7 @@ const BottomNav: React.FC = () => {
             }`
           }
         >
-          <Menu size={24} strokeWidth={2} />
+          <MdMenu size={24} />
           <span className="text-[10px] font-medium">Menu</span>
         </NavLink>
       </div>

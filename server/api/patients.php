@@ -36,8 +36,9 @@ try {
     $whereClause = "WHERE p.branch_id = :branch_id";
 
     if (!empty($search)) {
-        $whereClause .= " AND (r.patient_name LIKE :search OR r.phone_number LIKE :search)";
-        $params[':search'] = "%$search%";
+        $whereClause .= " AND (r.patient_name LIKE :search_name OR r.phone_number LIKE :search_phone)";
+        $params[':search_name'] = "%$search%";
+        $params[':search_phone'] = "%$search%";
     }
 
     // Count total for pagination

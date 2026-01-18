@@ -2,18 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { 
-    Send, 
-    Paperclip, 
-    ArrowLeft, 
-    Search,
-    User,
-    MessageCircle,
-    Check,
-    CheckCheck,
-    FileText,
-    X,
-    Loader2
-} from 'lucide-react';
+    MdSend, 
+    MdAttachFile, 
+    MdArrowBack, 
+    MdSearch,
+    MdPerson,
+    MdChat, // For MessageCircle replacement
+    MdCheck,
+    MdDoneAll,
+    MdDescription,
+    MdClose,
+    MdRefresh // For loading
+} from 'react-icons/md';
 
 interface ChatUser {
     id: number;
@@ -41,7 +41,6 @@ const ChatScreen: React.FC = () => {
     const [activeUser, setActiveUser] = useState<ChatUser | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState('');
-
     const [isLoadingMessages, setIsLoadingMessages] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -60,7 +59,6 @@ const ChatScreen: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
-    // Handle deep link from notification
     // Handle deep link (Notification or URL Param)
     useEffect(() => {
         // 1. From Notification State
@@ -105,7 +103,6 @@ const ChatScreen: React.FC = () => {
 
     const fetchUsers = async () => {
         try {
-            // Pass user_id explicitly if needed, or rely on session + proxy
             const params = new URLSearchParams();
             const empId = user?.employee_id || (user as any)?.id;
             if (empId) params.append('employee_id', empId.toString());
@@ -210,7 +207,7 @@ const ChatScreen: React.FC = () => {
         }
     };
 
-    // Base path for navigation (Admin vs Reception)
+    // Base path for navigation
     const basePath = location.pathname.startsWith('/admin') ? '/admin/chat' : '/chat';
 
     const handleBackToList = () => {
@@ -233,15 +230,17 @@ const ChatScreen: React.FC = () => {
         const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         return (
-            <div key={msg.message_id} className={`flex w-full mb-4 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-md relative group ${
+            <div key={msg.message_id} className={`flex w-full mb-3 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[75%] rounded-[20px] px-4 py-3 shadow-sm relative group ${
                     isMe 
-                    ? 'bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-br-none' 
-                    : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-none border border-gray-100 dark:border-gray-700'
+                    ? 'bg-primary text-on-primary rounded-br-none' 
+                    : 'bg-surface-variant/50 dark:bg-gray-800 text-on-surface dark:text-gray-100 rounded-bl-none border border-outline-variant/10 dark:border-gray-700'
                 }`}>
                     {/* Content */}
                     {msg.message_type === 'text' && (
-                        <p className="text-sm md:text-base leading-relaxed break-words">{msg.message_text}</p>
+                        <p className={`text-sm md:text-base leading-relaxed break-words font-normal ${isMe ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
+                            {msg.message_text}
+                        </p>
                     )}
                     {msg.message_type === 'image' && (
                         <div 
@@ -253,16 +252,16 @@ const ChatScreen: React.FC = () => {
                     )}
                     {(msg.message_type === 'pdf' || msg.message_type === 'doc') && (
                         <a href={`${FILE_BASE_URL}${msg.message_text}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-white/10 p-2 rounded hover:bg-white/20 transition-colors">
-                            <FileText size={20} />
+                            <MdDescription size={20} />
                             <span className="text-sm underline truncate max-w-[150px]">Attachment</span>
                         </a>
                     )}
 
                     {/* Meta */}
-                    <div className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${isMe ? 'text-teal-100' : 'text-gray-400'}`}>
+                    <div className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${isMe ? 'text-primary-container' : 'text-outline dark:text-gray-500'}`}>
                         <span>{time}</span>
                         {isMe && (
-                            msg.is_read ? <CheckCheck size={14} className="text-blue-200" /> : <Check size={14} />
+                            msg.is_read ? <MdDoneAll size={14} className="text-white" /> : <MdCheck size={14} />
                         )}
                     </div>
                 </div>
@@ -273,61 +272,66 @@ const ChatScreen: React.FC = () => {
     // --- VIEW: User List ---
     if (!activeUser) {
         return (
-            <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 pb-[env(safe-area-inset-bottom)]">
+            <div className="flex flex-col h-full bg-surface dark:bg-gray-950 pb-[env(safe-area-inset-bottom)] relative">
+                {/* Primary Gradient Background Mesh */}
+                <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-primary/30 via-primary/5 to-transparent pointer-events-none z-0 dark:from-primary/10" />
+                
                 {/* Header */}
-                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md px-4 py-3 pt-[max(env(safe-area-inset-top),16px)] sticky top-0 z-30 border-b border-gray-100 dark:border-gray-700 shadow-sm">
+                <div className="bg-transparent backdrop-blur-xl px-5 py-4 pt-[max(env(safe-area-inset-top),20px)] sticky top-0 z-30 transition-colors duration-200">
                     <div className="flex items-center justify-between mb-4">
-                        <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Chats</h1>
-                        <div className="p-2 bg-teal-50 dark:bg-teal-900/20 rounded-full">
-                            <MessageCircle size={20} className="text-teal-600 dark:text-teal-400" />
+                        <h1 className="text-2xl font-bold font-poppins text-on-surface dark:text-white tracking-tight">Chats</h1>
+                        <div className="p-2 bg-secondary-container dark:bg-teal-900/20 rounded-full">
+                            <MdChat size={20} className="text-on-secondary-container dark:text-teal-400" />
                         </div>
                     </div>
                     {/* Search */}
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-outline dark:text-gray-400" size={18} />
                         <input 
                             type="text" 
                             placeholder="Search colleagues..." 
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-gray-100 dark:bg-gray-700/50 text-gray-900 dark:text-white pl-10 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/50 transition-all font-medium placeholder-gray-500"
+                            className="w-full bg-surface-variant/30 dark:bg-gray-800 text-on-surface dark:text-white pl-10 pr-4 py-3 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium placeholder-outline dark:placeholder-gray-500"
                         />
                     </div>
                 </div>
 
                 {/* List */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-24 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-5 space-y-3 pb-24 custom-scrollbar">
                     {filteredUsers.length > 0 ? (
                         filteredUsers.map(u => (
                             <button
                                 key={u.id}
                                 onClick={() => navigate(`${basePath}/${u.id}`)}
-                                className="w-full bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all active:scale-[0.98] group"
+                                className="w-full bg-surface dark:bg-gray-900 p-4 rounded-[20px] shadow-sm border border-outline-variant/10 dark:border-gray-800 flex items-center gap-4 hover:bg-surface-variant/20 dark:hover:bg-gray-800 transition-all active:scale-[0.98] group"
                             >
                                 <div className="relative">
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:shadow-indigo-500/30 transition-shadow">
+                                    <div className="w-12 h-12 rounded-2xl bg-primary-container dark:bg-primary/20 flex items-center justify-center text-on-primary-container dark:text-primary-container font-bold text-lg shadow-sm">
                                         {u.username.charAt(0).toUpperCase()}
                                     </div>
                                     {/* Online indicator (simulated for now) */}
-                                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
+                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-surface dark:bg-gray-900 rounded-full flex items-center justify-center">
+                                        <div className="w-2.5 h-2.5 bg-green-500 rounded-full"></div>
+                                    </div>
                                 </div>
                                 <div className="flex-1 text-left overflow-hidden">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="font-bold text-gray-900 dark:text-white text-base truncate">{u.username}</h3>
-                                        <span className="text-[10px] text-gray-400 font-medium bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-md">{u.role}</span>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h3 className="font-medium text-on-surface dark:text-white text-base truncate">{u.username}</h3>
+                                        <span className="text-[10px] text-on-surface-variant dark:text-gray-400 font-medium bg-surface-variant/50 dark:bg-gray-800 px-2 py-0.5 rounded-md border border-outline-variant/10 dark:border-gray-700">{u.role}</span>
                                     </div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">Tap to chat with {u.username.split(' ')[0]}</p>
+                                    <p className="text-xs text-outline dark:text-gray-500 truncate">Tap to chat</p>
                                 </div>
                                 {u.unread_count > 0 && (
-                                    <div className="w-6 h-6 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-bold shadow-md shadow-teal-500/30 animate-pulse">
+                                    <div className="w-6 h-6 rounded-full bg-error flex items-center justify-center text-white text-xs font-bold shadow-md shadow-error/30 animate-pulse">
                                         {u.unread_count}
                                     </div>
                                 )}
                             </button>
                         ))
                     ) : (
-                        <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                             <User size={48} className="mb-2 opacity-20" />
+                        <div className="flex flex-col items-center justify-center h-64 text-outline/50 dark:text-gray-600">
+                             <MdPerson size={48} className="mb-2 opacity-50" />
                              <p className="text-sm font-medium">No colleagues found</p>
                         </div>
                     )}
@@ -338,37 +342,45 @@ const ChatScreen: React.FC = () => {
 
     // --- VIEW: Active Chat ---
     return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+        <div className="flex flex-col h-full bg-surface dark:bg-gray-950 pb-[env(safe-area-inset-bottom)]">
             {/* Chat Header */}
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md px-4 py-3 pt-[max(env(safe-area-inset-top),10px)] sticky top-0 z-30 border-b border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-between">
+            <div className="bg-surface/90 dark:bg-gray-900/90 backdrop-blur-md px-4 py-3 pt-[max(env(safe-area-inset-top),16px)] sticky top-0 z-30 border-b border-outline-variant/10 dark:border-gray-800 shadow-sm flex items-center justify-between transition-colors duration-200">
                 <div className="flex items-center gap-3">
-                    <button onClick={handleBackToList} className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                        <ArrowLeft size={22} className="text-gray-700 dark:text-gray-200" />
+                    <button onClick={handleBackToList} className="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 dark:hover:bg-gray-800 transition-colors">
+                        <MdArrowBack size={24} className="text-on-surface dark:text-gray-200" />
                     </button>
                     <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                         <div className="w-10 h-10 rounded-full bg-primary-container dark:bg-primary/20 flex items-center justify-center text-on-primary-container dark:text-primary-container font-bold text-sm shadow-sm">
                             {activeUser.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <h2 className="font-bold text-gray-900 dark:text-white text-sm leading-tight">{activeUser.username}</h2>
+                            <h2 className="font-medium text-on-surface dark:text-white text-sm leading-tight">{activeUser.username}</h2>
+                            <p className="text-[10px] text-outline dark:text-gray-400 capitalize">{activeUser.role}</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50 dark:bg-slate-900/50" style={{ backgroundImage: 'radial-gradient(circle at center, #e2e8f0 1px, transparent 1px)', backgroundSize: '24px 24px', opacity: 0.9 }}>
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-surface-variant/20 dark:bg-gray-950" style={{ backgroundImage: 'radial-gradient(circle at center, var(--tw-gradient-stops))', opacity: 1 }}>
+                {/* Subtle pattern overlay */}
+                <div className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]" 
+                     style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='1' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E")` }}>
+                </div>
+
                 {isLoadingMessages && messages.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                 ) : (
                     messages.length > 0 ? (
-                        messages.map(renderMessage)
+                        <div className="relative z-10 space-y-1">
+                            {messages.map(renderMessage)}
+                        </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full opacity-40">
-                            <MessageCircle size={64} className="text-gray-300 mb-4" />
-                            <p className="text-gray-500 text-sm">Start a conversation with {activeUser.username}</p>
+                            <MdChat size={64} className="text-outline mb-4" />
+                            <p className="text-on-surface-variant text-sm">Start a conversation with {activeUser.username}</p>
                         </div>
                     )
                 )}
@@ -376,7 +388,7 @@ const ChatScreen: React.FC = () => {
             </div>
 
             {/* Input Area */}
-            <div className="p-3 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 pb-[max(env(safe-area-inset-bottom),12px)]">
+            <div className="p-3 bg-surface dark:bg-gray-900 border-t border-outline-variant/10 dark:border-gray-800 pb-[max(env(safe-area-inset-bottom),12px)] relative z-20">
                 <div className="flex items-end gap-2 max-w-4xl mx-auto">
                     <input 
                         type="file" 
@@ -388,11 +400,11 @@ const ChatScreen: React.FC = () => {
                     <button 
                         onClick={() => !isUploading && fileInputRef.current?.click()}
                         disabled={isUploading}
-                        className="p-3 text-gray-400 hover:text-teal-600 bg-gray-50 dark:bg-gray-700/50 rounded-2xl hover:bg-teal-50 transition-all disabled:opacity-50"
+                        className="p-3 text-on-surface-variant/70 hover:text-primary bg-surface-variant/30 dark:bg-gray-800 rounded-full hover:bg-primary-container/30 transition-all disabled:opacity-50"
                     >
-                        {isUploading ? <Loader2 size={20} className="animate-spin text-teal-600" /> : <Paperclip size={20} />}
+                        {isUploading ? <MdRefresh size={24} className="animate-spin text-primary" /> : <MdAttachFile size={24} />}
                     </button>
-                    <div className="flex-1 bg-gray-100 dark:bg-gray-700/50 rounded-2xl flex items-center px-4 py-2 focus-within:ring-2 focus-within:ring-teal-500/30 transition-all">
+                    <div className="flex-1 bg-surface-variant/30 dark:bg-gray-800 rounded-[24px] flex items-center px-4 py-2 focus-within:ring-2 focus-within:ring-primary/30 transition-all border border-transparent focus-within:border-primary/20">
                         <textarea 
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
@@ -403,7 +415,7 @@ const ChatScreen: React.FC = () => {
                                 }
                             }}
                             placeholder="Type a message..."
-                            className="bg-transparent border-none focus:ring-0 w-full text-sm max-h-32 resize-none py-2 text-gray-900 dark:text-white placeholder-gray-500"
+                            className="bg-transparent border-none focus:ring-0 w-full text-sm max-h-32 resize-none py-2 text-on-surface dark:text-white placeholder-outline dark:placeholder-gray-500"
                             rows={1}
                             style={{ minHeight: '40px' }}
                         />
@@ -411,9 +423,9 @@ const ChatScreen: React.FC = () => {
                     <button 
                         onClick={handleSendMessage} 
                         disabled={!inputText.trim()}
-                        className="p-3 bg-teal-600 text-white rounded-2xl shadow-lg shadow-teal-600/30 hover:bg-teal-700 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:shadow-none disabled:hover:scale-100"
+                        className="p-3 bg-primary text-on-primary rounded-full shadow-lg shadow-primary/30 hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:shadow-none disabled:hover:scale-100"
                     >
-                        <Send size={20} />
+                        <MdSend size={20} className="ml-0.5" />
                     </button>
                 </div>
             </div>
@@ -421,16 +433,16 @@ const ChatScreen: React.FC = () => {
             {/* Image Modal */}
             {selectedImage && (
                 <div 
-                    className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 animate-in fade-in duration-200"
+                    className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 animate-fade-in"
                     onClick={() => setSelectedImage(null)}
                 >
                     <button className="absolute top-4 right-4 p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors">
-                        <X size={24} />
+                        <MdClose size={24} />
                     </button>
                     <img 
                         src={selectedImage || ''} 
                         alt="Full size" 
-                        className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                        className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-scale-in"
                     />
                 </div>
             )}

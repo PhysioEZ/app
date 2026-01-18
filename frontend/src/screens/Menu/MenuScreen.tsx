@@ -3,20 +3,23 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { 
-    UserPlus, 
-    ClipboardList, 
-    QrCode, 
-    Receipt, 
-    Wallet, 
-    BarChart3, 
-    TestTube2, 
-    Headphones,
-    MessageSquare,
-    Info,
-    ChevronRight,
-    LayoutGrid,
-    LogOut
-} from 'lucide-react';
+    MdPersonAdd, 
+    MdAssignment, 
+    MdQrCodeScanner, 
+    MdReceiptLong, 
+    MdAccountBalanceWallet, 
+    MdBarChart, 
+    MdBiotech, 
+    MdSupportAgent,
+    MdFeedback,
+    MdInfo,
+    MdChevronRight,
+    MdLogout,
+    MdWbSunny,
+    MdDarkMode
+} from 'react-icons/md';
+
+const ADMIN_URL = 'https://prospine.in/admin';
 
 const MenuScreen: React.FC = () => {
     const navigate = useNavigate();
@@ -36,202 +39,211 @@ const MenuScreen: React.FC = () => {
         { 
             id: 'inquiry', 
             label: 'Inquiry', 
-            desc: 'Manage leads & requests',
-            icon: <ClipboardList size={22} />, 
-            color: 'from-blue-500 to-blue-600',
-            bg: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+            icon: <MdAssignment size={24} />, 
             link: '/inquiry'
         },
         { 
             id: 'registration', 
             label: 'Registration', 
-            desc: 'Add new patient',
-            icon: <UserPlus size={22} />, 
-            color: 'from-teal-500 to-teal-600',
-            bg: 'bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400',
+            icon: <MdPersonAdd size={24} />, 
             link: '/registration'
         },
         { 
             id: 'attendance', 
             label: 'Attendance', 
-            desc: 'Mark daily visits',
-            icon: <QrCode size={22} />, 
-            color: 'from-purple-500 to-purple-600',
-            bg: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
+            icon: <MdQrCodeScanner size={24} />, 
             link: '/attendance'
         },
         { 
             id: 'billing', 
             label: 'Billing', 
-            desc: 'Invoices & payments',
-            icon: <Receipt size={22} />, 
-            color: 'from-indigo-500 to-indigo-600',
-            bg: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+            icon: <MdReceiptLong size={24} />, 
             link: '/billing'
         },
         { 
             id: 'tests', 
-            label: 'Tests', 
-            desc: 'Lab tests management',
-            icon: <TestTube2 size={22} />, 
-            color: 'from-pink-500 to-pink-600',
-            bg: 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400',
+            label: 'Lab Tests', 
+            icon: <MdBiotech size={24} />, 
             link: '/tests'
         },
         { 
             id: 'reports', 
             label: 'Reports', 
-            desc: 'Analytics & stats',
-            icon: <BarChart3 size={22} />, 
-            color: 'from-orange-500 to-orange-600',
-            bg: 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400',
+            icon: <MdBarChart size={24} />, 
             link: '/reports'
         },
         { 
             id: 'expenses', 
             label: 'Expenses', 
-            desc: 'Track clinic spending',
-            icon: <Wallet size={22} />, 
-            color: 'from-red-500 to-red-600',
-            bg: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400',
+            icon: <MdAccountBalanceWallet size={24} />, 
             link: '/expenses'
         },
         { 
             id: 'feedback', 
             label: 'Feedback', 
-            desc: 'Patient reviews',
-            icon: <MessageSquare size={22} />, 
-            color: 'from-lime-500 to-lime-600',
-            bg: 'bg-lime-100 dark:bg-lime-900/30 text-lime-600 dark:text-lime-400',
+            icon: <MdFeedback size={24} />, 
             link: '/feedback'
         },
         { 
             id: 'support', 
             label: 'Support', 
-            desc: 'Help & documentation',
-            icon: <Headphones size={22} />, 
-            color: 'from-cyan-500 to-cyan-600',
-            bg: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400',
+            icon: <MdSupportAgent size={24} />, 
             link: '/support'
         }
     ];
 
+    const [isDark, setIsDark] = useState(document.documentElement.classList.contains('dark'));
+
+    const toggleTheme = () => {
+        if (isDark) {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+            setIsDark(false);
+        } else {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+            setIsDark(true);
+        }
+    };
+
     return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors pb-[env(safe-area-inset-bottom)]">
-            {/* Header */}
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md px-6 py-4 pt-[max(env(safe-area-inset-top),20px)] shadow-sm sticky top-0 z-20 border-b border-gray-100 dark:border-gray-700">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
-                        <LayoutGrid size={24} className="text-indigo-600 dark:text-indigo-400" />
-                    </div>
+        <div className="flex flex-col h-full bg-gray-50 dark:bg-black transition-colors pb-[env(safe-area-inset-bottom)] font-sans relative">
+            {/* Primary Gradient Background Mesh */}
+            <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-primary/30 via-primary/5 to-transparent pointer-events-none z-0 dark:from-primary/10" />
+
+            {/* Minimal Header */}
+            <div className="bg-gray-50 dark:bg-black px-6 py-6 pt-[max(env(safe-area-inset-top),32px)] relative z-10 bg-transparent">
+                <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Menu</h1>
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Quick Access</p>
+                        <h1 className="text-3xl font-bold font-poppins text-black dark:text-white tracking-tight">Menu</h1>
                     </div>
                 </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 pb-24 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto px-6 pb-32 no-scrollbar">
                 
-                {/* User Profile Card */}
-                <div className="mb-6 bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                {/* Profile Strip */}
+                <div className="flex items-center justify-between mb-8 py-2 border-b border-gray-100 dark:border-gray-900">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-teal-400 to-teal-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-teal-500/30">
-                            {user?.name?.charAt(0) || 'U'}
+                        <div className="w-16 h-16 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-2xl font-bold overflow-hidden border border-gray-200 dark:border-gray-800">
+                            {user?.photo ? (
+                                <img 
+                                    src={`${ADMIN_URL}/${user.photo}`} 
+                                    alt={user.name} 
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = 'none'; 
+                                        ((e.target as HTMLImageElement).nextSibling as HTMLElement).style.display = 'flex';
+                                    }}
+                                />
+                            ) : (
+                                <span>{user?.name?.charAt(0) || 'U'}</span>
+                            )}
+                            {/* Fallback for error handling on image */}
+                            <span className="hidden w-full h-full items-center justify-center bg-black dark:bg-white text-white dark:text-black">
+                                {user?.name?.charAt(0) || 'U'}
+                            </span>
                         </div>
                         <div>
-                            <h2 className="font-black text-gray-900 dark:text-white text-lg leading-tight">{user?.name || 'User'}</h2>
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{user?.role || 'Staff'}</p>
+                            <h2 className="font-bold text-base text-black dark:text-white">{user?.name || 'User'}</h2>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">{user?.role || 'Staff'}</p>
                         </div>
                     </div>
-                    <button 
-                        onClick={handleLogout} 
-                        className="p-3 rounded-full bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors active:scale-95"
-                        title="Logout"
-                    >
-                        <LogOut size={20} />
-                    </button>
                 </div>
 
-                {/* 3-Column Compact Grid */}
-                <div className="grid grid-cols-3 gap-3">
-                    {menuItems.map((item, index) => (
+                {/* List Layout with Minimal Icons */}
+                <div className="space-y-2">
+                    {menuItems.map((item) => (
                         <button 
                             key={item.id}
                             onClick={() => navigate(item.link)}
-                            className="group relative bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center aspect-square hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-                            style={{ animationDelay: `${index * 50}ms` }}
+                            className="w-full group bg-white dark:bg-gray-900/50 p-4 rounded-xl flex items-center justify-between active:scale-[0.99] transition-all duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-800"
                         >
-                            <div className={`p-3 rounded-2xl mb-2 ${item.bg} group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
-                                {item.icon}
+                            <div className="flex items-center gap-4">
+                                <div className="text-gray-400 group-hover:text-black dark:group-hover:text-white transition-colors">
+                                    {item.icon}
+                                </div>
+                                <span className="font-medium text-base text-gray-800 dark:text-gray-200">{item.label}</span>
                             </div>
-                            <h3 className="font-bold text-gray-900 dark:text-white text-[11px] leading-tight">{item.label}</h3>
-                            
-                            {/* Hover Gradient Overlay */}
-                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/0 to-gray-50/50 dark:from-transparent dark:to-gray-700/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                            <MdChevronRight size={20} className="text-gray-300 dark:text-gray-700 group-hover:translate-x-1 transition-transform" />
                         </button>
                     ))}
                 </div>
 
-                {/* Compact About Section */}
-                <div className="mt-6">
-                    <button 
-                        onClick={() => navigate('/about')}
-                        className="w-full p-1 rounded-2xl bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-500 shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-300 group"
-                    >
-                        <div className="bg-white dark:bg-gray-900 rounded-[14px] px-4 py-3 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-teal-50 dark:bg-teal-900/20 rounded-full">
-                                    <Info size={18} className="text-teal-500" />
-                                </div>
-                                <div className="text-left">
-                                    <h3 className="font-bold text-gray-900 dark:text-white text-sm">About App</h3>
-                                    <p className="text-[10px] font-bold text-teal-500 uppercase tracking-widest leading-none">v2.5.0</p>
-                                </div>
+                {/* Footer Links */}
+                <div className="mt-4 space-y-2">
+                     <button 
+                        onClick={toggleTheme} 
+                        className="w-full group bg-white dark:bg-gray-900/50 p-4 rounded-xl flex items-center justify-between active:scale-[0.99] transition-all duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-800"
+                     >
+                        <div className="flex items-center gap-4">
+                            <div className="text-gray-400 group-hover:text-black dark:group-hover:text-white transition-colors">
+                                {isDark ? <MdWbSunny size={24} /> : <MdDarkMode size={24} />}
                             </div>
-                            <ChevronRight size={16} className="text-gray-400" />
+                            <span className="font-medium text-base text-gray-800 dark:text-gray-200">Appearance</span>
                         </div>
-                    </button>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">{isDark ? 'Dark' : 'Light'}</span>
+                            <div className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                                <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${isDark ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                            </div>
+                        </div>
+                     </button>
+                     <button 
+                        onClick={() => navigate('/about')} 
+                        className="w-full group bg-white dark:bg-gray-900/50 p-4 rounded-xl flex items-center justify-between active:scale-[0.99] transition-all duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-800"
+                     >
+                        <div className="flex items-center gap-4">
+                            <div className="text-gray-400 group-hover:text-black dark:group-hover:text-white transition-colors">
+                                <MdInfo size={24} />
+                            </div>
+                            <span className="font-medium text-base text-gray-800 dark:text-gray-200">About App</span>
+                        </div>
+                        <MdChevronRight size={20} className="text-gray-300 dark:text-gray-700 group-hover:translate-x-1 transition-transform" />
+                     </button>
+
+                     <button 
+                        onClick={handleLogout} 
+                        className="w-full group bg-white dark:bg-gray-900/50 p-4 rounded-xl flex items-center justify-between active:scale-[0.99] transition-all duration-200 border border-transparent hover:border-red-500/30 dark:hover:border-red-500/30"
+                     >
+                        <div className="flex items-center gap-4">
+                            <div className="text-red-500">
+                                <MdLogout size={24} />
+                            </div>
+                            <span className="font-medium text-base text-red-500">Log Out</span>
+                        </div>
+                     </button>
                 </div>
 
-                {/* Footer Credits */}
-                <div className="mt-8 mb-6 text-center">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Created by</p>
-                    <p className="text-xs font-bold text-gray-600 dark:text-gray-300">
-                        Sumit Srivastava
-                    </p>
+                {/* Version */}
+                <div className="mt-6 text-center">
+                    <p className="text-[10px] font-bold text-gray-800 uppercase tracking-widest opacity-50">v3.0.0</p>
+                    <p className="text-[12px] uppercase text-gray-800 mt-2">© 2026 Physio EZ</p>
                 </div>
             </div>
-            {/* Logout Confirmation Modal */}
+
+            {/* Logout Modal (Minimal) */}
             {showLogoutModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in p-4">
                     <div 
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" 
-                        onClick={() => setShowLogoutModal(false)}
-                    ></div>
-                    <div className="relative bg-white dark:bg-gray-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200">
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <LogOut size={28} strokeWidth={2.5} />
-                            </div>
-                            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">Logout?</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                                Are you sure you want to sign out of your account?
-                            </p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        className="bg-white dark:bg-gray-950 w-full sm:max-w-xs rounded-2xl shadow-2xl p-6 mb-20 sm:mb-0 border border-gray-100 dark:border-gray-900"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-bold text-black dark:text-white mb-2">Sign out?</h3>
+                        <p className="text-sm text-gray-500 mb-6">Confirm you want to exit.</p>
+                        <div className="flex gap-3">
                             <button 
                                 onClick={() => setShowLogoutModal(false)} 
-                                className="py-3.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-bold rounded-2xl transition-colors active:scale-95"
+                                className="flex-1 py-3 bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white font-bold rounded-lg text-sm"
                             >
                                 Cancel
                             </button>
                             <button 
                                 onClick={confirmLogout} 
-                                className="py-3.5 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl shadow-lg shadow-red-500/20 transition-all active:scale-95"
+                                className="flex-1 py-3 bg-black dark:bg-white text-white dark:text-black font-bold rounded-lg text-sm"
                             >
-                                Yes, Logout
+                                Sign Out
                             </button>
                         </div>
                     </div>

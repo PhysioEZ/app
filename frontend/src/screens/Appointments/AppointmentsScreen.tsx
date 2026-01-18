@@ -1,7 +1,15 @@
 import * as React from 'react';
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { Phone, RefreshCw, ChevronLeft, Calendar, CheckCircle, XCircle, MoreVertical } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { 
+    MdPhone, 
+    MdRefresh, 
+    MdCheckCircle, 
+    MdAccessTime,
+    MdPerson,
+    MdMoreVert,
+    MdArrowDropDown,
+    MdHistory
+} from 'react-icons/md';
 import { useAuthStore } from '../../store/useAuthStore';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://prospine.in/admin/mobile/api';
@@ -20,26 +28,18 @@ interface Appointment {
 const formatDate = (d: Date) => d.toISOString().split('T')[0];
 
 const AppointmentsScreen: React.FC = () => {
-  const navigate = useNavigate();
   const { user } = useAuthStore();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // displayMonth is used to control which month range we fetch
   const [displayMonth] = useState(new Date());
   
   // Date selection state
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
-  const dateListRef = useRef<HTMLDivElement>(null);
+  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
 
-  // Scroll to selected date on mount and when changed
-  useEffect(() => {
-    if (dateListRef.current && selectedDate) {
-        const el = document.getElementById(`date-${selectedDate}`);
-        if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-        }
-    }
-  }, [selectedDate]);
+  // --- Data Fetching ---
 
   const fetchAppointments = useCallback(async (dateForMonth: Date) => {
     setLoading(true);
@@ -53,7 +53,10 @@ const AppointmentsScreen: React.FC = () => {
       const response = await fetch(`${API_URL}/appointments.php?branch_id=${branchId}&employee_id=${employeeId}&start_date=${startDate}&end_date=${endDate}`);
       const json = await response.json();
       if (json.status === 'success') {
-        setAppointments(json.data || []);
+        const data = json.data || [];
+        // Sort by time
+        data.sort((a: Appointment, b: Appointment) => a.appointment_time.localeCompare(b.appointment_time));
+        setAppointments(data);
       }
     } catch (error) {
       console.error('Failed to fetch appointments', error);
@@ -97,44 +100,49 @@ const AppointmentsScreen: React.FC = () => {
   };
 
   // --- Derived Data ---
-  
-  // Generate all days for the current displayed month
+
   const availableDates = useMemo(() => {
-     const year = displayMonth.getFullYear();
-     const month = displayMonth.getMonth();
-     const date = new Date(year, month, 1);
-     const dates = [];
+     const dates = new Set(appointments.map(a => a.appointment_date));
+     const today = new Date().toISOString().split('T')[0];
+     dates.add(today);
+     return Array.from(dates).sort();
+  }, [appointments]);
 
-     while (date.getMonth() === month) {
-       dates.push(new Date(date).toISOString().split('T')[0]);
-       date.setDate(date.getDate() + 1);
-     }
-     return dates;
-  }, [displayMonth]);
-
-  // Filter by selected date
   const filteredAppointments = useMemo(() => {
      return appointments.filter(a => a.appointment_date === selectedDate);
   }, [appointments, selectedDate]);
 
-  // Stats for the SELECTED date
   const dayStats = useMemo(() => {
     return {
         total: filteredAppointments.length,
-        consulted: filteredAppointments.filter(a => a.status.toLowerCase() === 'consulted').length,
-        pending: filteredAppointments.filter(a => a.status.toLowerCase() === 'pending').length
+        done: filteredAppointments.filter(a => ['consulted', 'closed'].includes(a.status.toLowerCase())).length,
+        pending: filteredAppointments.filter(a => a.status.toLowerCase() === 'pending' || a.status.toLowerCase() == 'confirmed').length,
+        cancelled: filteredAppointments.filter(a => a.status.toLowerCase() === 'cancelled').length
     };
   }, [filteredAppointments]);
 
+  // --- Helper Functions ---
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'confirmed': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-      case 'pending': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
-      case 'consulted': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-      case 'closed': return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400';
-      case 'cancelled': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-      default: return 'bg-gray-50 text-gray-500';
+      case 'confirmed': return 'bg-sky-500';
+      case 'pending': return 'bg-amber-500';
+      case 'consulted': return 'bg-emerald-500';
+      case 'closed': return 'bg-gray-500';
+      case 'cancelled': return 'bg-rose-500';
+      default: return 'bg-gray-400';
     }
+  };
+
+  const getStatusStyles = (status: string) => {
+      // Returns generic styles for the card border/accents
+      switch (status.toLowerCase()) {
+          case 'consulted': return 'border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-900/10';
+          case 'cancelled': return 'border-rose-500/30 opacity-75 grayscale-[0.5]';
+          case 'pending':
+          case 'confirmed': return 'border-primary/20 hover:border-primary/50';
+          default: return 'border-outline-variant/20';
+      }
   };
 
   const formatDateLabel = (dateStr: string) => {
@@ -142,39 +150,41 @@ const AppointmentsScreen: React.FC = () => {
       return {
           day: d.toLocaleDateString('en-US', { weekday: 'short' }),
           date: d.getDate(),
-          month: d.toLocaleDateString('en-US', { month: 'short' })
       };
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50/50 dark:bg-gray-900 transition-colors duration-200">
-      {/* Modern Glassy Header */}
-      <header className="px-6 py-4 pt-11 flex items-center justify-between sticky top-0 z-20 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 active:scale-95 transition-transform">
-            <ChevronLeft size={20} />
-          </button>
-          <div>
-            <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Schedule</h1>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
-                 Command Center
-            </p>
-          </div>
-        </div>
-        <button 
-          onClick={handleRefresh} 
-          className={`w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 active:scale-95 transition-transform ${refreshing ? 'animate-spin' : ''}`}
-        >
-          <RefreshCw size={18} />
-        </button>
-      </header>
+    <div className="flex flex-col h-full bg-surface dark:bg-gray-950 relative font-sans">
+      
+      {/* Primary Gradient Background Mesh */}
+      <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-primary/30 via-primary/5 to-transparent pointer-events-none z-0 dark:from-primary/10" />
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar">
-          
-          {/* Horizontal Date Picker */}
-          <div ref={dateListRef} className="px-6 py-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm sticky top-0 z-10 overflow-x-auto no-scrollbar flex gap-3 snap-x">
+      {/* --- Unified Header & Calendar --- */}
+      <div className="bg-transparent backdrop-blur-xl sticky top-0 z-30 transition-colors duration-200">
+        {/* Top Navbar */}
+        <header className="px-5 py-3 pt-11 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+                <div>
+                    <h1 className="text-xl font-bold font-poppins text-on-surface dark:text-white tracking-tight flex items-center gap-2">
+                        Schedule
+                        <span className="px-2 py-0.5 rounded-full bg-surface-variant dark:bg-gray-800 text-[10px] font-bold text-outline dark:text-gray-400 border border-outline-variant/20">
+                            {new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                        </span>
+                    </h1>
+                </div>
+            </div>
+            <button 
+                onClick={handleRefresh} 
+                className={`w-10 h-10 rounded-full bg-surface-variant/40 hover:bg-surface-variant/60 dark:bg-gray-800 flex items-center justify-center text-on-surface dark:text-gray-200 transition-all active:scale-95 ${refreshing ? 'animate-spin' : ''}`}
+            >
+                <MdRefresh size={20} />
+            </button>
+        </header>
+
+        {/* Date Strip */}
+        <div className="px-4 pb-3 overflow-x-auto no-scrollbar flex gap-2 snap-x">
                {availableDates.map(date => {
-                   const { day, date: dayNum, month } = formatDateLabel(date);
+                   const { day, date: dayNum } = formatDateLabel(date);
                    const isSelected = date === selectedDate;
                    const isToday = date === new Date().toISOString().split('T')[0];
 
@@ -183,126 +193,169 @@ const AppointmentsScreen: React.FC = () => {
                             key={date}
                             id={`date-${date}`}
                             onClick={() => setSelectedDate(date)}
-                            className={`flex flex-col items-center justify-center min-w-[4.5rem] p-2 rounded-2xl border transition-all duration-300 snap-center
+                            className={`flex flex-col items-center justify-center min-w-[3.8rem] h-[4.2rem] rounded-2xl border transition-all duration-300 snap-center
                                 ${isSelected 
-                                    ? 'bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-lg shadow-teal-500/30 border-transparent scale-105' 
-                                    : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-100 dark:border-gray-700'
+                                    ? 'bg-primary text-on-primary shadow-md shadow-primary/25 border-transparent scale-105' 
+                                    : 'bg-surface dark:bg-gray-900/50 text-outline dark:text-gray-400 border-transparent hover:bg-surface-variant/50'
                                 }
                             `}
                        >
-                           <span className="text-[10px] font-bold uppercase opacity-80">{day}</span>
-                           <span className="text-xl font-black">{dayNum}</span>
-                           <span className="text-[10px] font-bold opacity-60">{isToday ? 'Today' : month}</span>
+                           <span className={`text-[10px] font-bold uppercase ${isSelected ? 'opacity-90' : 'opacity-70'}`}>{day}</span>
+                           <span className="text-lg font-bold my-0.5">{dayNum}</span>
+                           {isToday && <span className="w-1 h-1 rounded-full bg-current opacity-80 mt-0.5"></span>}
                        </button>
                    );
                })}
+        </div>
+      </div>
+
+      {/* --- Main Content --- */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden relative">
+          
+          {/* Summary Pill - Floating/Sticky behaviour could be added, keeping it simple inline for now */}
+          <div className="px-5 py-4">
+              <div className="flex items-center justify-between bg-surface-variant/30 dark:bg-gray-900 border border-outline-variant/10 dark:border-gray-800 rounded-2xl p-4">
+                  <div className="flex flex-col items-center flex-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-outline dark:text-gray-400 mb-0.5">Total</span>
+                      <span className="text-2xl font-bold text-on-surface dark:text-white leading-none">{dayStats.total}</span>
+                  </div>
+                  <div className="w-px h-8 bg-outline-variant/20 dark:bg-gray-800"></div>
+                   <div className="flex flex-col items-center flex-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-0.5">Done</span>
+                      <span className="text-2xl font-bold text-on-surface dark:text-white leading-none">{dayStats.done}</span>
+                  </div>
+                  <div className="w-px h-8 bg-outline-variant/20 dark:bg-gray-800"></div>
+                   <div className="flex flex-col items-center flex-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-0.5">Pending</span>
+                      <span className="text-2xl font-bold text-on-surface dark:text-white leading-none">{dayStats.pending}</span>
+                  </div>
+              </div>
           </div>
 
-          <div className="p-6 space-y-6 pb-24">
-            
-            {/* Day Stats Hero */}
-            <div className="bg-gradient-to-r from-teal-500 to-emerald-600 rounded-3xl p-6 text-white shadow-xl shadow-teal-500/20 relative overflow-hidden">
-                 <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-white/10 blur-2xl"></div>
-                 
-                 <div className="flex justify-between items-end mb-4 relative z-10">
-                     <div>
-                        <p className="text-teal-100 text-xs font-bold uppercase tracking-wider mb-1">
-                            Schedule for {new Date(selectedDate).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}
-                        </p>
-                        <h2 className="text-3xl font-black">{dayStats.total} <span className="text-lg font-medium opacity-70">Appts</span></h2>
-                     </div>
-                     <div className="p-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10">
-                         <Calendar size={24} className="text-white" />
-                     </div>
-                 </div>
-                 
-                 <div className="grid grid-cols-2 gap-3 relative z-10">
-                     <div className="bg-black/10 rounded-2xl p-3 border border-white/5 flex items-center justify-between">
-                         <span className="text-xs font-bold text-teal-50 uppercase">Pending</span>
-                         <span className="text-lg font-black">{dayStats.pending}</span>
-                     </div>
-                     <div className="bg-black/10 rounded-2xl p-3 border border-white/5 flex items-center justify-between">
-                         <span className="text-xs font-bold text-teal-50 uppercase">Done</span>
-                         <span className="text-lg font-black">{dayStats.consulted}</span>
-                     </div>
-                 </div>
-            </div>
-
-            {/* Timeline List */}
-            <div className="space-y-4">
-                {loading ? (
-                    <div className="flex justify-center py-10"><div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div></div>
-                ) : filteredAppointments.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 opacity-50">
-                        <Calendar size={48} className="text-gray-300 mb-2" />
-                        <p className="font-bold text-gray-400">No appointments for this day.</p>
+          <div className="px-5 pb-24 min-h-[50vh]">
+            {loading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-xs font-medium text-outline">Loading schedule...</p>
+                </div>
+            ) : filteredAppointments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 opacity-60">
+                    <div className="w-16 h-16 rounded-full bg-surface-variant/50 flex items-center justify-center mb-4">
+                        <MdAccessTime size={32} className="text-outline" />
                     </div>
-                ) : (
-                    filteredAppointments.map((appt) => (
-                        <div key={appt.registration_id} className="group bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700/50 flex gap-4 transition-all duration-300 hover:shadow-md">
-                             {/* Time Column */}
-                             <div className="flex flex-col items-center min-w-[3.5rem] border-r border-gray-100 dark:border-gray-700 pr-4 py-1">
-                                 <span className="text-lg font-black text-gray-900 dark:text-white leading-none">
-                                     {appt.appointment_time.slice(0, 5)}
-                                 </span>
-                                 <span className="text-[10px] font-bold text-gray-400 uppercase mt-1">
-                                     {parseInt(appt.appointment_time.slice(0, 2)) >= 12 ? 'PM' : 'AM'}
-                                 </span>
-                             </div>
+                    <h3 className="text-base font-bold text-on-surface dark:text-gray-200">No Appointments</h3>
+                    <p className="text-sm text-outline dark:text-gray-500 text-center max-w-[200px] mt-1">
+                        There are no scheduled visits for {new Date(selectedDate).toLocaleDateString()}.
+                    </p>
+                </div>
+            ) : (
+                <div className="relative pl-2">
+                    {/* Vertical Timeline Line */}
+                    <div className="absolute left-[3.5rem] top-4 bottom-4 w-px bg-outline-variant/30 dark:bg-gray-800 border-l border-dashed border-gray-300 dark:border-gray-700"></div>
 
-                             {/* Details Column */}
-                             <div className="flex-1 min-w-0">
-                                 <div className="flex justify-between items-start mb-1">
-                                     <h3 className="font-bold text-gray-900 dark:text-white truncate text-base">{appt.patient_name}</h3>
-                                     <button className="text-gray-300 hover:text-gray-600 dark:hover:text-gray-200">
-                                         <MoreVertical size={16} />
-                                     </button>
-                                 </div>
-                                 
-                                 <div className="flex items-center gap-2 mb-3">
-                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${getStatusColor(appt.status)}`}>
-                                         {appt.status}
-                                     </span>
-                                     <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                                     <span className="text-xs text-gray-500 font-medium capitalize">{appt.gender || 'Unknown'}, {appt.age || '?'}</span>
-                                 </div>
+                    <div className="space-y-6">
+                        {filteredAppointments.map((appt, i) => (
+                            <div key={appt.registration_id} className="relative flex gap-4 animate-slide-up" style={{ animationDelay: `${i * 50}ms` }}>
+                                {/* Time Column */}
+                                <div className="flex flex-col items-end w-[2.8rem] pt-1.5 shrink-0">
+                                    <span className="text-sm font-bold text-on-surface dark:text-white leading-none">
+                                        {appt.appointment_time.slice(0, 5)}
+                                    </span>
+                                    <div className="text-[9px] font-bold text-outline dark:text-gray-500 uppercase mt-0.5 tracking-wider">
+                                        {parseInt(appt.appointment_time.slice(0, 2)) >= 12 ? 'PM' : 'AM'}
+                                    </div>
+                                </div>
 
-                                 {/* Quick Actions Row */}
-                                 <div className="flex items-center gap-3 mt-2">
-                                     {appt.phone_number && (
-                                         <a href={`tel:${appt.phone_number}`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-bold active:scale-95 transition-transform">
-                                             <Phone size={12} /> Call
-                                         </a>
-                                     )}
-                                     <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleStatusUpdate(appt.registration_id, 'consulted');
-                                        }}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-transform
-                                            ${appt.status === 'consulted' 
-                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 ring-2 ring-green-500/20' 
-                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-900/30 dark:hover:text-green-400'
-                                            }`}
-                                     >
-                                         <CheckCircle size={12} /> Arrived
-                                     </button>
-                                     <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleStatusUpdate(appt.registration_id, 'pending');
-                                        }}
-                                        className="w-8 h-8 rounded-xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center text-gray-400 hover:text-red-500 dark:hover:text-red-400 active:scale-95 transition-transform"
-                                        title="Mark as Pending / No Show"
-                                     >
-                                         <XCircle size={14} />
-                                     </button>
-                                 </div>
-                             </div>
-                        </div>
-                    ))
-                )}
-            </div>
+                                {/* Timeline Node */}
+                                <div className="relative z-10 pt-2 shrink-0">
+                                    <div className={`w-3.5 h-3.5 rounded-full ring-4 ring-bg-surface dark:ring-gray-950 shadow-sm ${getStatusColor(appt.status)}`}></div>
+                                </div>
+                                
+                                {/* Card */}
+                                <div className={`flex-1 min-w-0 bg-white dark:bg-gray-900 rounded-[20px] p-4 border shadow-sm transition-all active:scale-[0.98] ${getStatusStyles(appt.status)}`}>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 truncate pr-2">
+                                                {appt.patient_name}
+                                            </h3>
+                                            <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                                                <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">
+                                                    <MdPerson size={10} />
+                                                    <span>{appt.gender || '?'}, {appt.age || '-'}</span>
+                                                </div>
+                                                <span className={`px-2 py-0.5 rounded-md uppercase text-[9px] font-bold tracking-wider text-white ${getStatusColor(appt.status)}`}>
+                                                    {appt.status}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Status Context Menu or simple more button */}
+                                        <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 -mr-2 -mt-2">
+                                            <MdMoreVert size={18} />
+                                        </button>
+                                    </div>
+
+                                    {/* Actions */}
+                                    {['cancelled', 'closed'].includes(appt.status.toLowerCase()) ? null : (
+                                        <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800/50 relative">
+                                            {appt.phone_number && (
+                                                <a href={`tel:${appt.phone_number}`} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                                    <MdPhone size={14} /> Call
+                                                </a>
+                                            )}
+                                            
+                                            {appt.status !== 'consulted' && (
+                                                <div className="flex-[2] relative">
+                                                    <div className="flex items-center bg-primary rounded-full shadow-sm shadow-primary/20 overflow-hidden">
+                                                        <button 
+                                                            onClick={() => handleStatusUpdate(appt.registration_id, 'consulted')}
+                                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 text-on-primary text-xs font-bold hover:bg-black/10 transition-colors whitespace-nowrap"
+                                                        >
+                                                            <MdCheckCircle size={14} className="shrink-0" /> Check In
+                                                        </button>
+                                                        <div className="w-px h-5 bg-white/20"></div>
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setActiveDropdownId(activeDropdownId === appt.registration_id ? null : appt.registration_id);
+                                                            }}
+                                                            className={`px-2 py-2.5 text-on-primary hover:bg-black/10 transition-colors flex items-center justify-center ${activeDropdownId === appt.registration_id ? 'bg-black/10' : ''}`}
+                                                        >
+                                                            <MdArrowDropDown size={18} />
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Dropdown Menu */}
+                                                    {activeDropdownId === appt.registration_id && (
+                                                        <>
+                                                            <div 
+                                                                className="fixed inset-0 z-10" 
+                                                                onClick={() => setActiveDropdownId(null)}
+                                                            />
+                                                            <div className="absolute right-0 bottom-full mb-2 w-40 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden z-20 animate-scale-in origin-bottom-right">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleStatusUpdate(appt.registration_id, 'pending');
+                                                                        setActiveDropdownId(null);
+                                                                    }}
+                                                                    className="w-full flex items-center gap-2 px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                                                >
+                                                                    <MdHistory size={16} className="text-amber-500" /> Mark Pending
+                                                                </button>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
           </div>
       </div>
     </div>
