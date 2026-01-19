@@ -384,6 +384,19 @@ const DashboardScreen: React.FC = () => {
                         </button>
                     </div>
                 )}
+                
+                {/* View All Link */}
+                <div className="p-3 border-t border-outline-variant/10 dark:border-gray-800 shrink-0 text-center">
+                    <button 
+                        onClick={() => {
+                            setShowNotifications(false);
+                            navigate('/notifications');
+                        }}
+                        className="text-sm font-bold text-primary hover:underline"
+                    >
+                        View All Notifications
+                    </button>
+                </div>
              </div>
         </div>
       )}
