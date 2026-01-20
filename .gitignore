@@ -6,4 +6,4 @@ frontend/.env
 .vscode
 .bak
 .apk
-# .json
+config

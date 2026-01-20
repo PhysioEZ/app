@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':platform' => $platform
         ]);
 
-        echo json_encode(['status' => 'success', 'message' => 'Token saved']);
+        echo json_encode(['status' => 'success', 'message' => 'Token saved DEBUG_V1']);
 
     } catch (PDOException $e) {
         http_response_code(500);
