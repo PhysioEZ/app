@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../../store/useAuthStore';
+import { useNavigate } from 'react-router-dom';
 import { 
-    MessageCircle, Search, Filter, Smile, Meh, Frown, User, MapPin, Phone
-} from 'lucide-react';
+    MdMessage, MdSearch, MdFilterList, 
+    MdSentimentVerySatisfied, MdSentimentNeutral, 
+    MdSentimentVeryDissatisfied, MdPerson, 
+    MdLocationOn, MdPhone, MdChevronLeft 
+} from 'react-icons/md';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://prospine.in/admin/mobile/api';
 
@@ -21,6 +25,7 @@ interface Feedback {
 
 const FeedbackScreen: React.FC = () => {
     const { user } = useAuthStore();
+    const navigate = useNavigate();
     const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ total: 0, good: 0, average: 0, bad: 0 });
@@ -77,55 +82,65 @@ const FeedbackScreen: React.FC = () => {
 
     const getTypeIcon = (type: string) => {
         switch (type) {
-            case 'Good': return <Smile size={16} strokeWidth={2.5} />;
-            case 'Average': return <Meh size={16} strokeWidth={2.5} />;
-            case 'Bad': return <Frown size={16} strokeWidth={2.5} />;
-            default: return <MessageCircle size={16} />;
+            case 'Good': return <MdSentimentVerySatisfied size={18} />;
+            case 'Average': return <MdSentimentNeutral size={18} />;
+            case 'Bad': return <MdSentimentVeryDissatisfied size={18} />;
+            default: return <MdMessage size={18} />;
         }
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] transition-colors duration-200 font-sans">
+        <div className="flex flex-col h-screen bg-[#f8fafc] dark:bg-black transition-colors duration-200 relative overflow-hidden font-sans">
             
+            {/* Branded Header Gradient */}
+            <div className="absolute top-0 left-0 right-0 h-[300px] bg-gradient-to-b from-[#f0f9ff] via-[#f0f9ff]/50 to-transparent dark:from-sky-900/10 dark:to-transparent pointer-events-none z-0" />
+
             {/* Header */}
-            <header className="px-6 py-4 pt-10 sticky top-0 z-30 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center justify-between mb-4">
-                    <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Quality Control</p>
-                        <h1 className="text-xl font-black text-gray-900 dark:text-white">Patient Feedback</h1>
+            <header className="px-6 py-6 pt-12 flex flex-col gap-6 z-40 relative">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={() => navigate('/admin/menu')} 
+                            className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900/50 shadow-sm border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 active:scale-90 transition-all"
+                        >
+                            <MdChevronLeft size={24} />
+                        </button>
+                        <div>
+                            <h1 className="text-2xl font-light text-gray-900 dark:text-white tracking-tight leading-none">Feedback</h1>
+                            <p className="text-[10px] font-medium text-sky-600 dark:text-sky-400 uppercase tracking-[0.2em] mt-2">Patient Experience</p>
+                        </div>
                     </div>
                 </div>
 
-                 {/* Search & Filter Bar */}
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                     <div className="relative flex-1">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                         <input 
-                            className="w-full bg-gray-50 dark:bg-gray-800/50 rounded-xl py-3 pl-11 pr-4 text-sm font-semibold text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-indigo-500 outline-none transition-all placeholder:text-gray-400"
-                            placeholder="Search feedback..."
+                            className="w-full bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border border-gray-100 dark:border-white/5 rounded-2xl py-3 pl-11 pr-4 text-[10px] font-bold uppercase tracking-widest text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/10 transition-all placeholder:text-gray-300"
+                            placeholder="Find feedback..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
                     {/* Filter Type Toggle */}
-                    <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+                    <div className="flex bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border border-gray-100 dark:border-white/5 rounded-2xl p-1 gap-1">
                          <button 
                             onClick={() => setFilterType('all')}
-                            className={`p-2.5 rounded-lg transition-all ${filterType === 'all' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                            className={`p-2 rounded-xl transition-all ${filterType === 'all' ? 'bg-white dark:bg-zinc-800 shadow-sm text-sky-600 dark:text-sky-400' : 'text-gray-400 hover:text-gray-600'}`}
                          >
-                            <Filter size={16} />
+                            <MdFilterList size={20} />
                          </button>
                          <button 
                             onClick={() => setFilterType(filterType === 'Good' ? 'all' : 'Good')}
-                            className={`p-2.5 rounded-lg transition-all ${filterType === 'Good' ? 'bg-emerald-500 text-white shadow-sm' : 'text-gray-400 hover:text-emerald-500'}`}
+                            className={`p-2 rounded-xl transition-all ${filterType === 'Good' ? 'bg-sky-500 text-white shadow-sm' : 'text-gray-400 hover:text-sky-500'}`}
                          >
-                            <Smile size={16} />
+                            <MdSentimentVerySatisfied size={20} />
                          </button>
                          <button 
                             onClick={() => setFilterType(filterType === 'Bad' ? 'all' : 'Bad')}
-                            className={`p-2.5 rounded-lg transition-all ${filterType === 'Bad' ? 'bg-rose-500 text-white shadow-sm' : 'text-gray-400 hover:text-rose-500'}`}
+                            className={`p-2 rounded-xl transition-all ${filterType === 'Bad' ? 'bg-rose-500 text-white shadow-sm' : 'text-gray-400 hover:text-rose-500'}`}
                          >
-                            <Frown size={16} />
+                            <MdSentimentVeryDissatisfied size={20} />
                          </button>
                     </div>
                 </div>
@@ -191,11 +206,11 @@ const FeedbackScreen: React.FC = () => {
                             <div className="flex items-center justify-between pt-3 border-t border-gray-50 dark:border-gray-700/50 mt-2">
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase">
-                                        <MapPin size={10} />
+                                        <MdLocationOn size={12} />
                                         <span>{fb.branch_name || 'Global'}</span>
                                     </div>
                                     <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase">
-                                        <User size={10} />
+                                        <MdPerson size={12} />
                                         <span>{fb.first_name} {fb.last_name}</span>
                                     </div>
                                 </div>
@@ -205,7 +220,7 @@ const FeedbackScreen: React.FC = () => {
                                         href={`tel:${fb.phone_number}`}
                                         className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-teal-500 to-emerald-600 text-white rounded-xl shadow-lg shadow-teal-500/20 active:scale-95 transition-all"
                                     >
-                                        <Phone size={12} fill="currentColor" />
+                                        <MdPhone size={14} />
                                         <span className="text-[10px] font-black uppercase tracking-wide">Call Patient</span>
                                     </a>
                                 )}

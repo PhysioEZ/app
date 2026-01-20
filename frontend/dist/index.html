@@ -2,13 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/logo.png" />
+    <link rel="icon" type="image/svg+xml" href="./logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="description" content="ProSpine Mobile - Clinic Management System" />
+    <meta name="description" content="PhysioEZ - Clinic Management System" />
     <meta name="theme-color" content="#14b8a6" />
-    <title>ProSpine Mobile</title>
-    <script type="module" crossorigin src="/assets/index-B-PqCJBm.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-CxqeEsGH.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>PhysioEZ</title>
+    <script>
+      (function() {
+        const theme = localStorage.getItem('theme');
+        if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="./assets/index-CcxS0-LU.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-C1W6OH3l.css">
   </head>
   <body>
     <div id="root"></div>

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { 
   MdArrowBack, MdPerson, MdPhone, MdLocationOn, MdCalendarToday, 
-  MdEmail, MdShield, MdBusiness, MdWork, MdVerified, MdEdit
+  MdEmail, MdShield, MdBusiness, MdVerified
 } from 'react-icons/md';
 
 import { useNavigate } from 'react-router-dom';

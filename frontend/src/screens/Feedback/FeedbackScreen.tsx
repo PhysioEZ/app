@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   MdArrowBack, MdSearch, MdCheckCircle, MdSentimentSatisfied, 
-  MdSentimentNeutral, MdSentimentDissatisfied, MdPerson, MdAccessTime, 
-  MdMessage, MdArrowForward, MdExpandMore, MdRefresh, MdTrendingUp
+  MdSentimentNeutral, MdSentimentDissatisfied, MdAccessTime, 
+  MdMessage, MdArrowForward, MdExpandMore, MdTrendingUp
 } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -161,7 +161,7 @@ export const FeedbackScreen = () => {
         bad: feedbacks.filter(f => f.feedback_type === 'Bad').length,
     };
 
-    const satisfactionRate = stats.total > 0 ? Math.round((stats.good / stats.total) * 100) : 0;
+
 
     return (
         <div className="flex flex-col h-full bg-surface dark:bg-black font-sans transition-colors relative">

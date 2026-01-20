@@ -58,7 +58,7 @@ const SplashScreen: React.FC = () => {
       <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center space-y-4 animate-fade-in" style={{ animationDelay: '600ms' }}>
          {/* Version Pill */}
          <span className="px-4 py-1.5 rounded-full bg-surface-variant/50 text-on-surface-variant text-[12px] font-medium tracking-wider backdrop-blur-md border border-outline-variant/20">
-           v2.5.0
+           v3.0.0
          </span>
 
          {/* Author Credit */}

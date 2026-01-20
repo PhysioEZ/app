@@ -1,10 +1,10 @@
-# CareSyncOS
+# PhysioEZ
 
-**CareSyncOS** is a premier mobile solution for clinic and hospital management, engineered to digitize and simplify the complex workflows of healthcare providers. Built with a focus on performance and user experience, it serves as a complete ecosystem for managing patients, finances, and day-to-day operations.
+**PhysioEZ** is a premier mobile solution for clinic and hospital management, engineered to digitize and simplify the complex workflows of healthcare providers. Built with a focus on performance and user experience, it serves as a complete ecosystem for managing patients, finances, and day-to-day operations.
 
 ## 📱 application Overview
 
-CareSyncOS bridges the gap between administrative needs and clinical excellence. Whether you are a solo practitioner or running a multi-specialty clinic, this app provides the tools needed to maintain an efficient, paperless workflow.
+PhysioEZ bridges the gap between administrative needs and clinical excellence. Whether you are a solo practitioner or running a multi-specialty clinic, this app provides the tools needed to maintain an efficient, paperless workflow.
 
 ### Core Features
 
@@ -38,12 +38,12 @@ CareSyncOS bridges the gap between administrative needs and clinical excellence.
 1.  Download the latest `app-release.apk`.
 2.  Enable "Install from Unknown Sources" on your Android device settings.
 3.  Open the file and tap **Install**.
-4.  Launch CareSyncOS and log in with your credentials.
+4.  Launch PhysioEZ and log in with your credentials.
 
 ## 🔒 Security & Performance
 
-CareSyncOS is built with modern security standards to ensure data privacy and integrity. The application is optimized for offline-first usage, ensuring critical data is accessible even with intermittent internet connectivity.
+PhysioEZ is built with modern security standards to ensure data privacy and integrity. The application is optimized for offline-first usage, ensuring critical data is accessible even with intermittent internet connectivity.
 
 ---
 
-© 2025 CareSyncOS. All rights reserved.
+© 2025 PhysioEZ. All rights reserved.

@@ -1,25 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { 
-    Settings, Plus, Edit2, Trash2, Power, 
-    Stethoscope, MessageCircle, Megaphone, Briefcase, CheckCircle, XCircle 
-} from 'lucide-react';
+    MdAdd, MdEdit, MdDelete, MdPowerSettingsNew, 
+    MdChevronLeft, MdSearch, MdClose, MdCheckCircle, MdWarning,
+    MdMedicalServices, MdCampaign, MdBusinessCenter, MdMessage
+} from 'react-icons/md';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://prospine.in/admin/mobile/api';
 
 interface ConfigItem {
-    id: number; // Generic ID mapping
+    id: number;
     name: string;
     code: string;
     is_active: number;
     display_order: number;
-    [key: string]: any; // For dynamic keys
+    [key: string]: any;
 }
 
 const ReceptionSettingsScreen: React.FC = () => {
     const { user } = useAuthStore();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'complaints' | 'sources' | 'consultations' | 'services'>('complaints');
+    const [searchTerm, setSearchTerm] = useState('');
     
     // Data Store
     const [data, setData] = useState<{
@@ -39,19 +43,16 @@ const ReceptionSettingsScreen: React.FC = () => {
     const [editingItem, setEditingItem] = useState<ConfigItem | null>(null);
     const [formData, setFormData] = useState({ name: '', code: '', is_active: 1, display_order: 0 });
     const [submitting, setSubmitting] = useState(false);
+    const [notification, setNotification] = useState<{type: 'success'|'error', message: string} | null>(null);
 
-    useEffect(() => {
-        if(user) fetchData();
-    }, [user]);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
+        if (!user) return;
         setLoading(true);
         try {
-            const empId = (user as any).employee_id || user?.id;
+            const empId = user.employee_id || user.id;
             const res = await fetch(`${API_URL}/admin/reception_settings.php?action=fetch_metadata&user_id=${empId}`);
             const json = await res.json();
             if (json.status === 'success') {
-                // Normalize data to generic structure
                 const normalized = {
                     complaints: json.data.complaints.map((i: any) => ({ ...i, id: i.complaint_id, name: i.complaint_name, code: i.complaint_code })),
                     sources: json.data.sources.map((i: any) => ({ ...i, id: i.source_id, name: i.source_name, code: i.source_code })),
@@ -65,18 +66,23 @@ const ReceptionSettingsScreen: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!user) return;
+
         setSubmitting(true);
         try {
-            const empId = (user as any).employee_id || user?.id;
+            const empId = user.employee_id || user.id;
             const res = await fetch(`${API_URL}/admin/reception_settings.php?action=save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    action: 'save',
                     user_id: empId,
                     category: activeTab,
                     id: editingItem ? editingItem.id : null,
@@ -87,11 +93,12 @@ const ReceptionSettingsScreen: React.FC = () => {
             if (json.status === 'success') {
                 setIsModalOpen(false);
                 fetchData();
+                notify('success', 'Changes saved');
             } else {
-                alert(json.message);
+                notify('error', json.message);
             }
         } catch (e) {
-            console.error(e);
+            notify('error', 'Update failed');
         } finally {
             setSubmitting(false);
         }
@@ -112,12 +119,12 @@ const ReceptionSettingsScreen: React.FC = () => {
                 body: JSON.stringify({ category: activeTab, id: item.id, status: newStatus })
             });
         } catch (e) {
-            fetchData(); // Revert on error
+            fetchData();
         }
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm('Are you sure? This cannot be undone.')) return;
+        if (!confirm('This action is permanent. Continue?')) return;
         try {
             const res = await fetch(`${API_URL}/admin/reception_settings.php?action=delete`, {
                 method: 'POST',
@@ -125,9 +132,12 @@ const ReceptionSettingsScreen: React.FC = () => {
                 body: JSON.stringify({ category: activeTab, id: id })
             });
             const json = await res.json();
-            if (json.status === 'success') fetchData();
+            if (json.status === 'success') {
+                fetchData();
+                notify('success', 'Item deleted');
+            }
         } catch (e) {
-            console.error(e);
+            notify('error', 'Delete failed');
         }
     };
 
@@ -141,177 +151,220 @@ const ReceptionSettingsScreen: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    // Tab items config
+    const notify = (type: 'success' | 'error', msg: string) => {
+        setNotification({ type, message: msg });
+        setTimeout(() => setNotification(null), 3000);
+    };
+
     const tabs = [
-        { id: 'complaints', label: 'Complaints', singular: 'Complaint', icon: <Stethoscope size={16} />, color: 'text-blue-500' },
-        { id: 'sources', label: 'Sources', singular: 'Source', icon: <Megaphone size={16} />, color: 'text-purple-500' },
-        { id: 'consultations', label: 'Consultations', singular: 'Consultation', icon: <Briefcase size={16} />, color: 'text-emerald-500' },
-        { id: 'services', label: 'Services', singular: 'Service', icon: <MessageCircle size={16} />, color: 'text-orange-500' }
+        { id: 'complaints', label: 'Complaints', singular: 'Complaint', icon: <MdMedicalServices size={20} />, color: 'text-blue-500', bg: 'bg-blue-50' },
+        { id: 'sources', label: 'Sources', singular: 'Source', icon: <MdCampaign size={20} />, color: 'text-purple-500', bg: 'bg-purple-50' },
+        { id: 'consultations', label: 'Consultations', singular: 'Consultation', icon: <MdBusinessCenter size={20} />, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+        { id: 'services', label: 'Services', singular: 'Service', icon: <MdMessage size={20} />, color: 'text-orange-500', bg: 'bg-orange-50' }
     ];
 
-    const currentTab = tabs.find(t => t.id === activeTab);
+    const currentTab = useMemo(() => tabs.find(t => t.id === activeTab)!, [activeTab]);
+
+    const filteredData = useMemo(() => {
+        const items = data[activeTab];
+        if (!searchTerm) return items;
+        const low = searchTerm.toLowerCase();
+        return items.filter(i => i.name.toLowerCase().includes(low) || i.code.toLowerCase().includes(low));
+    }, [data, activeTab, searchTerm]);
 
     return (
-        <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] transition-colors duration-200">
+        <div className="flex flex-col h-screen bg-[#f8fafc] dark:bg-black transition-colors duration-200 relative overflow-hidden font-sans">
+            
+            {/* Branded Header Gradient */}
+            <div className="absolute top-0 left-0 right-0 h-[300px] bg-gradient-to-b from-[#e0f2fe] via-[#e0f2fe]/50 to-transparent dark:from-blue-900/10 dark:to-transparent pointer-events-none z-0" />
+
             {/* Header */}
-            <header className="px-6 py-4 pt-11 sticky top-0 z-30 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+            <header className="px-6 py-6 pt-12 flex flex-col gap-6 z-40 relative">
                 <div className="flex justify-between items-center mb-4">
-                    <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Configuration</p>
-                        <h1 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                            <Settings size={20} className="text-gray-400" />
-                            Reception Settings
-                        </h1>
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={() => navigate('/admin/menu')} 
+                            className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900/50 shadow-sm border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 active:scale-90 transition-all"
+                        >
+                            <MdChevronLeft size={24} />
+                        </button>
+                        <div>
+                            <h1 className="text-2xl font-light text-gray-900 dark:text-white tracking-tight leading-none">Reception Settings</h1>
+                            <p className="text-[10px] font-medium text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] mt-2">Config & Metadata</p>
+                        </div>
                     </div>
-                    <button 
-                        onClick={() => openModal()}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-xl shadow-lg shadow-indigo-500/30 active:scale-95 transition-all"
-                    >
-                        <Plus size={20} />
-                    </button>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                <div className="relative">
+                    <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input 
+                        className="w-full bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border border-gray-100 dark:border-white/5 rounded-2xl py-3 pl-11 pr-4 text-[10px] font-bold uppercase tracking-widest text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-gray-300"
+                        placeholder={`Search ${currentTab.label}...`}
+                        value={searchTerm} 
+                        onChange={e => setSearchTerm(e.target.value)}
+                    />
+                </div>
+
+                {/* Tab Strip */}
+                <div className="flex gap-1 overflow-x-auto no-scrollbar py-2">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
+                            className={`flex flex-col items-center gap-2 px-6 py-3 rounded-2xl transition-all relative shrink-0 ${
                                 activeTab === tab.id 
-                                ? 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-sm text-gray-900 dark:text-white' 
-                                : 'bg-transparent border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
+                                : 'bg-white dark:bg-zinc-900 text-gray-400 border border-gray-50 dark:border-white/5'
                             }`}
                         >
-                            <span className={activeTab === tab.id ? tab.color : ''}>{tab.icon}</span>
-                            {tab.label}
+                            <div className={`${activeTab === tab.id ? 'text-white' : tab.color}`}>
+                                {tab.icon}
+                            </div>
+                            <span className="text-[8px] font-black uppercase tracking-widest">{tab.label}</span>
                         </button>
                     ))}
                 </div>
             </header>
 
-            {/* Content */}
-            <main className="flex-1 p-4 pb-24 overflow-y-auto">
-                <div className="space-y-3">
-                    {loading ? (
-                        <div className="py-20 flex justify-center">
-                            <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-                        </div>
-                    ) : data[activeTab].length === 0 ? (
-                        <div className="py-20 text-center text-gray-400">
-                            <p className="text-sm font-bold">No items found</p>
-                            <p className="text-xs mt-1">Add a new item to get started</p>
-                        </div>
-                    ) : (
-                        data[activeTab].map((item) => (
-                            <div key={item.id} className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 group">
-                                <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-xs font-black text-gray-300">
-                                    #{item.display_order}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-gray-900 dark:text-white text-sm truncate">{item.name}</h3>
-                                    <code className="text-[10px] text-gray-400 font-mono bg-gray-50 dark:bg-gray-900 px-1.5 py-0.5 rounded uppercase">{item.code}</code>
-                                </div>
-                                
-                                <div className="flex items-center gap-1">
-                                    <button 
-                                        onClick={() => handleToggleStatus(item)}
-                                        className={`p-2 rounded-lg transition-colors ${item.is_active ? 'text-emerald-500 hover:bg-emerald-50' : 'text-gray-300 hover:text-gray-500 hover:bg-gray-100'}`}
-                                    >
-                                        <Power size={16} />
-                                    </button>
-                                    <button 
-                                        onClick={() => openModal(item)}
-                                        className="p-2 text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
-                                    >
-                                        <Edit2 size={16} />
-                                    </button>
-                                    <button 
-                                        onClick={() => handleDelete(item.id)}
-                                        className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
+            <main className="flex-1 overflow-y-auto no-scrollbar p-5 pb-32 space-y-3 relative z-10">
+                {loading ? (
+                    <div className="py-20 text-center opacity-40 italic text-[10px] font-black uppercase tracking-widest">Loading metadata...</div>
+                ) : filteredData.length === 0 ? (
+                    <div className="py-20 text-center opacity-40 italic text-[10px] font-black uppercase tracking-widest">No entries found</div>
+                ) : (
+                    filteredData.map((item) => (
+                        <div key={item.id} className="bg-white dark:bg-zinc-900/50 p-5 rounded-[28px] border border-white dark:border-white/5 shadow-sm transition-all flex items-center gap-4 group">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg border shadow-inner shrink-0 ${currentTab.bg} ${currentTab.color} border-current/10`}>
+                                {item.name[0]}
                             </div>
-                        ))
-                    )}
-                </div>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase truncate">{item.name}</h3>
+                                <p className="text-[9px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest mt-1">CODE: {item.code} • ORDER: {item.display_order}</p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <button 
+                                    onClick={() => handleToggleStatus(item)}
+                                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${item.is_active ? 'bg-emerald-50 text-emerald-500 border border-emerald-100' : 'bg-gray-50 text-gray-300 border border-gray-200'}`}
+                                >
+                                    <MdPowerSettingsNew size={18} />
+                                </button>
+                                <button 
+                                    onClick={() => openModal(item)}
+                                    className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-zinc-800 text-gray-400 flex items-center justify-center active:scale-90 transition-all border border-gray-100 dark:border-white/5"
+                                >
+                                    <MdEdit size={18} />
+                                </button>
+                                <button 
+                                    onClick={() => handleDelete(item.id)}
+                                    className="w-9 h-9 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center active:scale-90 transition-all border border-rose-100"
+                                >
+                                    <MdDelete size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    ))
+                )}
             </main>
+
+            {/* FAB Button */}
+            <button 
+                onClick={() => openModal()}
+                className="fixed bottom-24 right-6 w-14 h-14 rounded-[24px] bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-2xl flex items-center justify-center active:scale-95 transition-all z-50 animate-in fade-in slide-in-from-bottom-6 duration-500"
+            >
+                <MdAdd size={32} />
+            </button>
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
-                    <div className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-3xl shadow-2xl p-6">
-                        <div className="flex justify-between items-center mb-6">
+                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-black w-full sm:max-w-md rounded-[48px] shadow-2xl overflow-hidden animate-slide-up border border-white dark:border-white/5 flex flex-col">
+                        <header className="p-10 flex justify-between items-center shrink-0">
                             <div>
-                                <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 ${currentTab?.color}`}>{currentTab?.label}</span>
-                                <h2 className="text-xl font-black text-gray-900 dark:text-white mt-2">
-                                    {editingItem ? `Edit ${currentTab?.singular}` : `New ${currentTab?.singular}`}
-                                </h2>
+                                <h3 className="text-2xl font-light italic text-gray-900 dark:text-white">
+                                    {editingItem ? 'Edit' : 'New'} {currentTab.singular}
+                                </h3>
+                                <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest mt-2">Manage System Config</p>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                                <XCircle size={24} />
+                            <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 rounded-full bg-gray-50 dark:bg-zinc-900 text-gray-400 flex items-center justify-center active:scale-90 transition-all">
+                                <MdClose size={24}/>
                             </button>
-                        </div>
+                        </header>
                         
-                        <form onSubmit={handleSave} className="space-y-4">
-                            <div>
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">Display Name</label>
+                        <form onSubmit={handleSave} className="flex-1 overflow-y-auto px-10 pb-10 no-scrollbar space-y-6">
+                            <div className="space-y-4">
+                                <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Display Name</label>
                                 <input 
                                     required
+                                    className="w-full bg-gray-50 dark:bg-zinc-900/50 border border-gray-100 dark:border-white/5 rounded-2xl py-4 px-6 text-xl font-light italic text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                                    placeholder="e.g. Neck Pain"
                                     value={formData.name}
                                     onChange={e => setFormData({...formData, name: e.target.value})}
-                                    className="w-full bg-gray-50 dark:bg-gray-700/50 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
-                                    placeholder="e.g. Neck Pain"
                                 />
                             </div>
-                            <div>
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">System Code</label>
+                            <div className="space-y-4">
+                                <label className="text-[9px] font-black text-gray-400 uppercase ml-2">System Code</label>
                                 <input 
                                     required
+                                    className="w-full bg-gray-50 dark:bg-zinc-900/50 border border-gray-100 dark:border-white/5 rounded-2xl py-4 px-6 text-sm font-bold uppercase text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all font-mono"
+                                    placeholder="e.g. neck_pain"
                                     value={formData.code}
                                     onChange={e => setFormData({...formData, code: e.target.value})}
-                                    className="w-full bg-gray-50 dark:bg-gray-700/50 rounded-xl px-4 py-3 text-sm font-mono text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
-                                    placeholder="e.g. neck_pain"
                                 />
                             </div>
-                            <div className="flex gap-4">
-                                <div className="flex-1">
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">Order</label>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-4">
+                                    <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Order</label>
                                     <input 
                                         type="number"
+                                        className="w-full bg-gray-50 dark:bg-zinc-900/50 border border-gray-100 dark:border-white/5 rounded-2xl py-4 px-6 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all"
                                         value={formData.display_order}
                                         onChange={e => setFormData({...formData, display_order: parseInt(e.target.value) || 0})}
-                                        className="w-full bg-gray-50 dark:bg-gray-700/50 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
                                     />
                                 </div>
-                                <div className="flex items-end pb-3">
+                                <div className="flex items-end">
                                     <button 
                                         type="button"
                                         onClick={() => setFormData({...formData, is_active: formData.is_active ? 0 : 1})}
-                                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${
+                                        className={`w-full h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all border ${
                                             formData.is_active 
-                                            ? 'bg-emerald-50 border-emerald-100 text-emerald-600' 
-                                            : 'bg-gray-50 border-gray-100 text-gray-400'
+                                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
+                                            : 'bg-gray-100 text-gray-400 border-gray-200'
                                         }`}
                                     >
-                                        <CheckCircle size={14} />
-                                        {formData.is_active ? 'Active' : 'Inactive'}
+                                        {formData.is_active ? 'Active' : 'Hidden'}
                                     </button>
                                 </div>
                             </div>
 
                             <button 
                                 disabled={submitting}
-                                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-500/30 active:scale-95 transition-all mt-4"
+                                className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-[28px] font-black text-[11px] uppercase tracking-widest shadow-2xl active:scale-95 disabled:opacity-30 transition-all mt-4"
                             >
-                                {submitting ? 'Saving...' : 'Save Changes'}
+                                {submitting ? 'Syncing...' : 'Save Configuration'}
                             </button>
                         </form>
                     </div>
                 </div>
             )}
+
+            {/* Notification */}
+            {notification && (
+                <div className={`fixed bottom-6 left-6 right-6 z-[200] p-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-slide-up ${
+                    notification.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+                }`}>
+                    {notification.type === 'success' ? <MdCheckCircle size={24} /> : <MdWarning size={24} />}
+                    <p className="text-[11px] font-black uppercase tracking-widest">{notification.message}</p>
+                </div>
+            )}
+
+            <style>{`
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .animate-fade-in { animation: fadeIn 0.2s ease-out; }
+                .animate-slide-up { animation: slideUp 0.3s ease-out; }
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+            `}</style>
         </div>
     );
 };

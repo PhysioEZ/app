@@ -14,26 +14,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// 2. Database Connection
-// File structure:
-// admin/mobile/api/login.php
-// admin/common/db.php
-// Relative path: ../../common/db.php
+// Database Access
+$dbPaths = [
+    __DIR__ . '/../../../common/db.php',
+    __DIR__ . '/../../common/db.php',
+    '/srv/http/admin/common/db.php'
+];
 
-$dbPath = __DIR__ . '/../../common/db.php';
-
-if (file_exists($dbPath)) {
-    require_once $dbPath;
-} else {
-    // Fallback: try one more level up just in case (e.g. if inside v1 folder)
-    $dbPathUp = __DIR__ . '/../../../common/db.php';
-    if (file_exists($dbPathUp)) {
-        require_once $dbPathUp;
-    } else {
-        http_response_code(500);
-        echo json_encode(["status" => "error", "message" => "Database configuration not found."]);
-        exit;
+$dbFound = false;
+foreach ($dbPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $dbFound = true;
+        break;
     }
+}
+
+if (!$dbFound) {
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Database configuration not found']);
+    exit;
 }
 
 // 3. Get Input

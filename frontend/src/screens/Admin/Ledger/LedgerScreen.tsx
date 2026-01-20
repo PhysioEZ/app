@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { 
-    TrendingUp, 
-    TrendingDown, 
-    Wallet, 
-    Calendar, 
-    Filter, 
-    ChevronDown, 
-    Banknote, 
-    CreditCard,
-    ArrowUpRight,
-    ArrowDownLeft,
-    Loader2
-} from 'lucide-react';
+    MdTrendingUp, 
+    MdAccountBalanceWallet, 
+    MdFilterList, 
+    MdExpandMore, 
+    MdPayments, 
+    MdScience,
+    MdPerson,
+    MdReceiptLong,
+    MdLocalHospital,
+    MdTrendingDown,
+    MdChevronLeft
+} from 'react-icons/md';
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://prospine.in/admin/mobile/api';
 
@@ -44,20 +45,20 @@ interface DailyLedger {
 
 const LedgerScreen: React.FC = () => {
     const { user } = useAuthStore();
+    const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(true);
     const [summary, setSummary] = useState<LedgerSummary | null>(null);
     const [ledger, setLedger] = useState<DailyLedger[]>([]);
     
     // Filters
     const now = new Date();
-    // Default to first day of current month
     const listStartOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const listEndOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     const [startDate, setStartDate] = useState(listStartOfMonth.toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(listEndOfMonth.toISOString().split('T')[0]);
     
-    // Expanded state for accordion
+    // Expanded state
     const [expandedDate, setExpandedDate] = useState<string | null>(null);
 
     const fetchLedger = async () => {
@@ -69,7 +70,6 @@ const LedgerScreen: React.FC = () => {
             params.append('start_date', startDate);
             params.append('end_date', endDate);
 
-            // Use the newly created API
             const response = await fetch(`${API_BASE_URL}/admin/ledger.php?${params.toString()}`);
             const data = await response.json();
 
@@ -86,19 +86,16 @@ const LedgerScreen: React.FC = () => {
 
     useEffect(() => {
         fetchLedger();
-    }, []); // Initial load
+    }, []);
 
-    // Format Currency
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'INR',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+            maximumFractionDigits: 0
         }).format(amount);
     };
 
-    // Format Date
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
         return {
@@ -109,257 +106,252 @@ const LedgerScreen: React.FC = () => {
         };
     };
 
-    const toggleExpand = (date: string) => {
-        setExpandedDate(expandedDate === date ? null : date);
+    const getTxnIcon = (desc: string) => {
+        const d = desc.toLowerCase();
+        if (d.includes('test') || d.includes('lab') || d.includes('diagnostic')) return <MdScience size={20} />;
+        if (d.includes('registration')) return <MdPerson size={20} />;
+        if (d.includes('treatment') || d.includes('session')) return <MdLocalHospital size={20} />;
+        if (d.includes('expense') || d.includes('purchase')) return <MdReceiptLong size={20} />;
+        return <MdPayments size={20} />;
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
-            {/* Header */}
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl sticky top-0 z-30 border-b border-gray-200 dark:border-gray-700 pb-2 pt-[max(env(safe-area-inset-top),16px)]">
-                <div className="px-4 flex items-center justify-between mb-4">
-                     <div>
-                        <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Financial Ledger</h1>
-                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Real-time Overview</p>
+        <div className="flex flex-col h-screen bg-[#f8fafc] dark:bg-gray-950 transition-colors duration-500 relative overflow-hidden font-sans">
+            
+            {/* Branded Header Gradient */}
+            <div className="absolute top-0 left-0 right-0 h-[300px] bg-gradient-to-b from-[#E0F2F1] via-[#E0F2F1]/50 to-transparent dark:from-teal-900/10 dark:to-transparent pointer-events-none z-0" />
+            
+            {/* Sticky Navigation & Title */}
+            <header className="px-6 py-6 pt-12 flex flex-col gap-6 z-30 relative">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={() => navigate('/admin/menu')} 
+                            className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900/50 shadow-sm border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 active:scale-90 transition-all"
+                        >
+                            <MdChevronLeft size={24} />
+                        </button>
+                        <div>
+                            <h1 className="text-2xl font-light text-gray-900 dark:text-white tracking-tight leading-none">Financial Ledger</h1>
+                            <p className="text-[10px] font-medium text-teal-600/70 dark:text-teal-400 uppercase tracking-[0.2em] mt-2">Real-time Accounting</p>
+                        </div>
                     </div>
-                    {/* Current Balance Tag */}
-                    <div className="text-right">
-                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Balance</p>
-                         <p className="text-lg font-black text-teal-600 dark:text-teal-400 tracking-tight">
+                    <div className="text-right shrink-0">
+                        <p className="text-[9px] font-medium text-teal-600/70 dark:text-teal-400/50 uppercase tracking-widest mb-0.5">Balance</p>
+                        <p className="text-xl font-light text-teal-600 dark:text-teal-400 tracking-tighter">
                             {summary ? formatCurrency(summary.current_balance) : '...'}
-                         </p>
+                        </p>
                     </div>
                 </div>
 
-                {/* Filters */}
-                <div className="px-4 pb-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
-                     <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl flex-1">
-                        <div className="relative flex-1">
-                            <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                {/* Date Controls */}
+                <div className="flex items-center gap-3">
+                    <div className="flex-1 flex items-center bg-white/70 dark:bg-gray-900/50 backdrop-blur-md rounded-2xl border border-white dark:border-gray-800 p-1.5 shadow-sm overflow-hidden">
+                         <div className="relative flex-1 min-w-0">
                             <input 
                                 type="date" 
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
-                                className="w-full bg-transparent border-none text-xs font-bold text-gray-900 dark:text-white pl-8 pr-2 focus:ring-0"
+                                className="w-full bg-transparent border-none text-[11px] font-medium text-gray-700 dark:text-gray-300 px-3 py-2 focus:ring-0 appearance-none"
                             />
                         </div>
-                        <span className="text-gray-400 text-xs">-</span>
-                        <div className="relative flex-1">
+                        <div className="w-px h-4 bg-gray-200 dark:bg-gray-800 mx-1 shrink-0" />
+                        <div className="relative flex-1 min-w-0">
                              <input 
                                 type="date" 
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
-                                className="w-full bg-transparent border-none text-xs font-bold text-gray-900 dark:text-white pl-2 pr-2 focus:ring-0 text-right"
+                                className="w-full bg-transparent border-none text-[11px] font-medium text-gray-700 dark:text-gray-300 px-3 py-2 focus:ring-0 text-right appearance-none"
                             />
                         </div>
-                     </div>
-                     <button 
+                    </div>
+                    <button 
                         onClick={fetchLedger}
-                        className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 p-2.5 rounded-xl shadow-lg hover:scale-105 transition-transform"
-                     >
-                        <Filter size={16} />
-                     </button>
+                        className="w-12 h-12 bg-gray-900 dark:bg-teal-600 text-white rounded-2xl shadow-lg flex items-center justify-center active:scale-90 transition-transform shrink-0"
+                    >
+                        <MdFilterList size={22} />
+                    </button>
                 </div>
-            </div>
+            </header>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar pb-24">
+            <main className="flex-1 px-6 overflow-y-auto no-scrollbar pb-32 z-10 relative">
                 
                 {isLoading && !summary ? (
-                    <div className="flex justify-center py-20">
-                        <Loader2 className="animate-spin text-teal-500" size={32} />
+                    <div className="flex flex-col items-center justify-center py-24 gap-4">
+                        <div className="w-8 h-8 border-2 border-gray-100 border-t-teal-500 rounded-full animate-spin" />
+                        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">Compiling Records...</p>
                     </div>
                 ) : (
                     <>
-                        {/* KPI Card - Merged */}
-                        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 mb-6 overflow-hidden">
-                            <div className="grid grid-cols-3 divide-x divide-gray-100 dark:divide-gray-700">
-                                {/* Income */}
-                                <div className="p-4 flex flex-col items-center justify-center text-center group hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 transition-colors">
-                                    <div className="mb-2 p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-full text-emerald-600 dark:text-emerald-400">
-                                        <TrendingUp size={16} />
+                        {/* Summary Snapshot - Redesigned to be more 'Hero' like */}
+                        <section className="mb-8 animate-scale-in">
+                            <div className="bg-[#00796B] rounded-[40px] p-8 shadow-[0_12px_40px_rgba(0,121,107,0.2)] text-white relative overflow-hidden">
+                                <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] bg-white/5 rounded-full blur-[60px]" />
+                                
+                                <div className="relative z-10 flex flex-col gap-8">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                                                <MdAccountBalanceWallet size={16} />
+                                            </div>
+                                            <span className="text-[10px] font-medium uppercase tracking-[0.2em] opacity-80">Period Performance</span>
+                                        </div>
+                                        <div className="px-3 py-1 bg-white/10 rounded-full border border-white/10 flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                            <span className="text-[9px] font-medium uppercase tracking-widest whitespace-nowrap">Net ROI</span>
+                                        </div>
                                     </div>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Income</p>
-                                    <h3 className="text-sm md:text-lg font-black text-gray-900 dark:text-white tracking-tight">
-                                        {formatCurrency(summary?.total_income || 0)}
-                                    </h3>
-                                </div>
 
-                                {/* Expenses */}
-                                <div className="p-4 flex flex-col items-center justify-center text-center group hover:bg-rose-50/30 dark:hover:bg-rose-900/10 transition-colors">
-                                    <div className="mb-2 p-2 bg-rose-50 dark:bg-rose-900/20 rounded-full text-rose-500 dark:text-rose-400">
-                                        <TrendingDown size={16} />
+                                    <div className="flex items-end justify-between gap-4">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] uppercase font-bold text-white/60 tracking-widest pl-1">Accumulated Net</p>
+                                            <h2 className="text-4xl font-light tracking-tighter truncate max-w-[200px]">
+                                                {formatCurrency(summary?.net_profit_loss || 0)}
+                                            </h2>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <div className="text-[9px] font-bold text-emerald-400/80 uppercase tracking-widest mb-1 flex items-center justify-end gap-1">
+                                                <MdTrendingUp size={10} /> Income
+                                            </div>
+                                            <p className="text-lg font-light tracking-tight">{formatCurrency(summary?.total_income || 0)}</p>
+                                        </div>
                                     </div>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Expenses</p>
-                                    <h3 className="text-sm md:text-lg font-black text-gray-900 dark:text-white tracking-tight">
-                                        {formatCurrency(summary?.total_expenses || 0)}
-                                    </h3>
-                                </div>
 
-                                {/* Net Balance */}
-                                <div className="p-4 flex flex-col items-center justify-center text-center group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors relative overflow-hidden">
-                                     <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300">
-                                        <Wallet size={16} />
+                                    <div className="grid grid-cols-2 gap-4 pt-6 border-t border-white/10">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 rounded-2xl bg-white/10 flex items-center justify-center text-rose-300">
+                                                 <MdTrendingDown size={18} />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest">Expenses</p>
+                                                <p className="text-sm font-medium truncate">{formatCurrency(summary?.total_expenses || 0)}</p>
+                                            </div>
+                                        </div>
+                                         <div className="flex items-center gap-3 justify-end text-right">
+                                            <div className="min-w-0">
+                                                <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest">Opening</p>
+                                                <p className="text-sm font-medium truncate">{formatCurrency(summary?.opening_balance || 0)}</p>
+                                            </div>
+                                            <div className="w-9 h-9 rounded-2xl bg-white/10 flex items-center justify-center text-teal-300">
+                                                 <MdPayments size={18} />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Net</p>
-                                    <h3 className={`text-sm md:text-lg font-black tracking-tight ${
-                                        (summary?.net_profit_loss || 0) >= 0 
-                                        ? 'text-teal-600 dark:text-teal-400' 
-                                        : 'text-rose-600 dark:text-rose-400'
-                                    }`}>
-                                        {(summary?.net_profit_loss || 0) >= 0 ? '+' : ''}{formatCurrency(summary?.net_profit_loss || 0)}
-                                    </h3>
                                 </div>
                             </div>
-                        </div>
+                        </section>
 
-                        {/* List */}
-                        <div className="space-y-3">
-                            {ledger.length > 0 ? ledger.map((day) => {
+                        {/* Daily Timeline */}
+                        <div className="space-y-4">
+                            {ledger.length > 0 ? ledger.map((day, idx) => {
                                 const d = formatDate(day.date);
                                 const isExpanded = expandedDate === day.date;
                                 
                                 return (
-                                    <div key={day.date} className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-                                        {/* Header */}
+                                    <div 
+                                        key={day.date} 
+                                        className={`bg-white dark:bg-gray-900 rounded-[32px] border transition-all duration-300 animate-slide-up
+                                            ${isExpanded ? 'border-teal-100 dark:border-teal-900 shadow-xl shadow-teal-500/5' : 'border-gray-100 dark:border-gray-800 shadow-sm'}
+                                        `}
+                                        style={{ animationDelay: `${idx * 100}ms` }}
+                                    >
                                         <div 
-                                            onClick={() => toggleExpand(day.date)}
-                                            className="p-4 flex flex-col gap-4 cursor-pointer active:bg-gray-50 dark:active:bg-gray-700/30 transition-colors"
+                                            onClick={() => setExpandedDate(isExpanded ? null : day.date)}
+                                            className="p-5 flex flex-col gap-4 cursor-pointer active:scale-[0.99] transition-transform"
                                         >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 flex flex-col items-center justify-center text-center">
-                                                        <span className="text-[10px] font-bold text-gray-400 uppercase leading-none">{d.month}</span>
-                                                        <span className="text-xl font-black text-gray-900 dark:text-white leading-none mt-0.5">{d.day}</span>
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex items-center gap-4 min-w-0">
+                                                    <div className="w-12 h-12 rounded-2xl bg-[#00796B]/5 dark:bg-teal-500/10 flex flex-col items-center justify-center border border-[#00796B]/10 shrink-0">
+                                                        <span className="text-[9px] font-medium text-teal-600/60 uppercase leading-none">{d.month}</span>
+                                                        <span className="text-xl font-light text-teal-700 dark:text-teal-400 mt-1">{d.day}</span>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{d.weekday}</p>
-                                                        <p className="text-xs text-gray-400 font-medium">{d.year}</p>
+                                                    <div className="min-w-0">
+                                                        <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{d.weekday}</h4>
+                                                        <p className="text-[10px] text-gray-400 uppercase tracking-widest">{d.year}</p>
                                                     </div>
                                                 </div>
                                                 
-                                                <div className="flex items-center gap-3">
-                                                    <div className="text-right">
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Closing</p>
-                                                        <p className="text-base font-black text-gray-900 dark:text-white">
-                                                            {formatCurrency(day.closing_balance.total)}
-                                                        </p>
-                                                    </div>
-                                                    <div className={`p-2 rounded-full bg-gray-100 dark:bg-gray-700 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-                                                        <ChevronDown size={16} className="text-gray-500" />
-                                                    </div>
+                                                <div className="text-right shrink-0">
+                                                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mb-0.5">Closing</p>
+                                                    <p className="text-base font-medium text-gray-900 dark:text-white tracking-tight">
+                                                        {formatCurrency(day.closing_balance.total)}
+                                                    </p>
                                                 </div>
                                             </div>
-                                            
-                                            {/* Cash & Bank Row */}
-                                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-50 dark:border-gray-700/50">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-500 shrink-0">
-                                                        <Banknote size={14} />
+
+                                            {/* Preview Strip: In/Out Badges */}
+                                            <div className="flex items-center justify-between pt-4 border-t border-gray-50 dark:border-gray-800/50">
+                                                <div className="flex gap-2 overflow-hidden">
+                                                    <div className="px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 rounded-full border border-emerald-100/50 dark:border-emerald-500/10 flex items-center gap-1.5 shrink-0">
+                                                        <div className="w-1 h-1 rounded-full bg-emerald-500" />
+                                                        <span className="text-[9px] font-medium text-emerald-600">+{formatCurrency(day.credits.total)}</span>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Cash In Hand</p>
-                                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(day.closing_balance.cash)}</p>
+                                                    <div className="px-3 py-1 bg-rose-50 dark:bg-rose-500/10 rounded-full border border-rose-100/50 dark:border-rose-500/10 flex items-center gap-1.5 shrink-0">
+                                                        <div className="w-1 h-1 rounded-full bg-rose-500" />
+                                                        <span className="text-[9px] font-medium text-rose-500">-{formatCurrency(day.debits.total)}</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-3 justify-end md:justify-start">
-                                                    <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500 shrink-0 order-last md:order-first">
-                                                        <CreditCard size={14} />
-                                                    </div>
-                                                    <div className="text-right md:text-left">
-                                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Bank / Online</p>
-                                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(day.closing_balance.online)}</p>
-                                                    </div>
+                                                <div className={`transition-transform duration-500 shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
+                                                    <MdExpandMore size={20} className="text-gray-300" />
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Expanded Content */}
+                                        {/* EXPANDED VIEW */}
                                         {isExpanded && (
-                                            <div className="border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 p-5 space-y-6 animate-in slide-in-from-top-2 duration-200">
+                                            <div className="px-5 pb-6 space-y-8 animate-fade-in">
                                                 
-                                                {/* Balance Sheet Table */}
-                                                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                                                    <div className="px-4 py-2 bg-gray-50/80 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
-                                                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Daily Balance Sheet</h4>
+                                                {/* Structural Balance Breakdown */}
+                                                <div className="bg-[#f8fafc] dark:bg-gray-950/50 rounded-3xl p-6 border border-gray-100/50 dark:border-gray-800 grid grid-cols-2 gap-y-6 gap-x-8">
+                                                    <BalanceMetric label="Opening" value={day.opening_balance.total} sub="Start" />
+                                                    <BalanceMetric label="Closing" value={day.closing_balance.total} sub="End" isHighlight />
+                                                    
+                                                    <div className="col-span-2 h-px bg-gray-200/50 dark:bg-gray-800/50 my-1" />
+                                                    
+                                                    <div className="min-w-0">
+                                                        <p className="text-[9px] font-medium text-gray-400 uppercase tracking-[0.2em] mb-2">Vault Cash</p>
+                                                        <div className="space-y-1">
+                                                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{formatCurrency(day.closing_balance.cash)}</p>
+                                                            <p className="text-[8px] text-emerald-500 font-bold uppercase truncate">+{formatCurrency(day.credits.cash)} Cr</p>
+                                                        </div>
                                                     </div>
-                                                    <div className="overflow-x-auto">
-                                                        <table className="w-full text-xs whitespace-nowrap">
-                                                            <thead>
-                                                                <tr className="border-b border-gray-50 dark:border-gray-700">
-                                                                    <th className="px-3 py-2 text-left font-bold text-gray-400 uppercase">Type</th>
-                                                                    <th className="px-3 py-2 text-right font-bold text-gray-400 uppercase">Open</th>
-                                                                    <th className="px-3 py-2 text-right font-bold text-emerald-500 uppercase">Cr</th>
-                                                                    <th className="px-3 py-2 text-right font-bold text-rose-500 uppercase">Dr</th>
-                                                                    <th className="px-3 py-2 text-right font-bold text-gray-400 uppercase">Close</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50 font-medium">
-                                                                <tr>
-                                                                    <td className="px-3 py-2 flex items-center gap-2">
-                                                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0"></div> Cash
-                                                                    </td>
-                                                                    <td className="px-3 py-2 text-right text-gray-500">{day.opening_balance.cash.toLocaleString('en-IN')}</td>
-                                                                    <td className="px-3 py-2 text-right text-emerald-600">{day.credits.cash.toLocaleString('en-IN')}</td>
-                                                                    <td className="px-3 py-2 text-right text-rose-600">{day.debits.cash.toLocaleString('en-IN')}</td>
-                                                                    <td className="px-3 py-2 text-right font-bold text-gray-900 dark:text-white">{day.closing_balance.cash.toLocaleString('en-IN')}</td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td className="px-3 py-2 flex items-center gap-2">
-                                                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></div> Online
-                                                                    </td>
-                                                                    <td className="px-3 py-2 text-right text-gray-500">{day.opening_balance.online.toLocaleString('en-IN')}</td>
-                                                                    <td className="px-3 py-2 text-right text-emerald-600">{day.credits.online.toLocaleString('en-IN')}</td>
-                                                                    <td className="px-3 py-2 text-right text-rose-600">{day.debits.online.toLocaleString('en-IN')}</td>
-                                                                    <td className="px-3 py-2 text-right font-bold text-gray-900 dark:text-white">{day.closing_balance.online.toLocaleString('en-IN')}</td>
-                                                                </tr>
-                                                                <tr className="bg-gray-50 dark:bg-gray-700/20 font-bold">
-                                                                    <td className="px-3 py-2">Total</td>
-                                                                    <td className="px-3 py-2 text-right">{day.opening_balance.total.toLocaleString('en-IN')}</td>
-                                                                    <td className="px-3 py-2 text-right text-emerald-600">{day.credits.total.toLocaleString('en-IN')}</td>
-                                                                    <td className="px-3 py-2 text-right text-rose-600">{day.debits.total.toLocaleString('en-IN')}</td>
-                                                                    <td className="px-3 py-2 text-right">{day.closing_balance.total.toLocaleString('en-IN')}</td>
-                                                                </tr>
-                                                            </tbody>
-                                                        </table>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[9px] font-medium text-gray-400 uppercase tracking-[0.2em] mb-2 text-right">E-Banking</p>
+                                                        <div className="space-y-1 text-right">
+                                                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{formatCurrency(day.closing_balance.online)}</p>
+                                                            <p className="text-[8px] text-emerald-500 font-bold uppercase truncate">+{formatCurrency(day.credits.online)} Cr</p>
+                                                        </div>
                                                     </div>
                                                 </div>
 
-                                                {/* Transactions List */}
+                                                {/* Daily Transaction Feed */}
                                                 <div>
-                                                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Transactions</h4>
-                                                    <div className="space-y-2">
-                                                        {day.transactions.map((txn, idx) => (
-                                                            <div key={idx} className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 
-                                                                        ${txn.method === 'cash' ? 'bg-orange-50 text-orange-500 dark:bg-orange-900/20' : 'bg-blue-50 text-blue-500 dark:bg-blue-900/20'}`}>
-                                                                        {txn.method === 'cash' ? <Banknote size={18} /> : <CreditCard size={18} />}
+                                                    <div className="flex items-center justify-between mb-4 px-1">
+                                                        <h5 className="text-[10px] font-medium text-gray-400 uppercase tracking-[0.3em]">Operational Feed</h5>
+                                                        <span className="text-[9px] bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full text-gray-400 shrink-0">{day.transactions.length} Events</span>
+                                                    </div>
+                                                    <div className="space-y-3">
+                                                        {day.transactions.map((txn, tIdx) => (
+                                                            <div key={tIdx} className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-50 dark:border-gray-800 flex items-center justify-between gap-3 active:scale-[0.98] transition-all">
+                                                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm 
+                                                                        ${txn.debit > 0 ? 'bg-rose-50 text-rose-400 dark:bg-rose-900/10' : 'bg-emerald-50 text-emerald-500 dark:bg-emerald-900/10'}`}>
+                                                                        {getTxnIcon(txn.description)}
                                                                     </div>
-                                                                    <div className="min-w-0">
-                                                                        <p className="text-xs font-bold text-gray-900 dark:text-white truncate max-w-[180px] sm:max-w-xs">{txn.description}</p>
-                                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                                            <span className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded font-medium">{txn.time}</span>
-                                                                            <span className="text-[10px] text-gray-400 uppercase tracking-wide">{txn.method}</span>
+                                                                    <div className="min-w-0 overflow-hidden">
+                                                                        <p className="text-xs font-medium text-gray-800 dark:text-gray-200 truncate leading-snug">{txn.description}</p>
+                                                                        <div className="flex items-center gap-2 mt-1 whitespace-nowrap">
+                                                                            <span className="text-[8px] font-bold bg-gray-50 dark:bg-gray-700 text-gray-400 dark:text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                                                                                {txn.time}
+                                                                            </span>
+                                                                            <span className="text-[9px] text-gray-300 font-medium uppercase tracking-widest">{txn.method}</span>
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                                <div className="text-right pl-2">
-                                                                    {txn.credit > 0 ? (
-                                                                        <div className="text-emerald-600 dark:text-emerald-400 flex flex-col items-end">
-                                                                             <div className="flex items-center gap-0.5">
-                                                                                <ArrowDownLeft size={12} />
-                                                                                <span className="text-sm font-black">+{txn.credit}</span>
-                                                                             </div>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="text-rose-600 dark:text-rose-400 flex flex-col items-end">
-                                                                             <div className="flex items-center gap-0.5">
-                                                                                <ArrowUpRight size={12} />
-                                                                                <span className="text-sm font-black">-{txn.debit}</span>
-                                                                             </div>
-                                                                        </div>
-                                                                    )}
+                                                                <div className="text-right shrink-0">
+                                                                    <p className={`text-sm font-medium tracking-tighter ${txn.credit > 0 ? 'text-emerald-500' : 'text-rose-400'}`}>
+                                                                        {txn.credit > 0 ? '+' : '-'}{formatCurrency(txn.credit || txn.debit)}
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                         ))}
@@ -371,16 +363,29 @@ const LedgerScreen: React.FC = () => {
                                     </div>
                                 );
                             }) : (
-                                <div className="text-center py-12">
-                                    <p className="text-gray-400 text-sm">No transactions found for this period.</p>
+                                <div className="flex flex-col items-center justify-center py-32 opacity-30">
+                                    <MdAccountBalanceWallet size={48} className="text-gray-400 mb-4" />
+                                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-[0.2em]">Zero Activity Period</p>
                                 </div>
                             )}
                         </div>
                     </>
                 )}
-            </div>
+            </main>
         </div>
     );
 };
+
+// --- Helper Components ---
+
+const BalanceMetric = ({ label, value, sub, isHighlight }: any) => (
+    <div className="min-w-0">
+        <p className="text-[9px] font-medium text-gray-400 uppercase tracking-[0.2em] mb-1.5">{label}</p>
+        <h5 className={`text-lg font-light tracking-tighter truncate ${isHighlight ? 'text-[#00796B] dark:text-teal-400' : 'text-gray-900 dark:text-white'}`}>
+            {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value)}
+        </h5>
+        <p className="text-[8px] text-gray-300 uppercase font-medium truncate">{sub}</p>
+    </div>
+);
 
 export default LedgerScreen;
