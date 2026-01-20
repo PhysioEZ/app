@@ -196,9 +196,11 @@ if ($method === 'GET') {
         $userId = $data['user_id'] ?? 0;
 
         try {
-            $stmt = $pdo->prepare("INSERT INTO branch_budgets (branch_id, daily_budget_amount, effective_from_date, created_by_employee_id) VALUES (?, ?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO branch_budgets (branch_id, daily_budget_amount, effective_from_date, created_by_employee_id) 
+                                   VALUES (?, ?, ?, ?) 
+                                   ON DUPLICATE KEY UPDATE daily_budget_amount = VALUES(daily_budget_amount), created_by_employee_id = VALUES(created_by_employee_id)");
             $stmt->execute([$branchId, $amount, $effectiveDate, $userId]);
-            echo json_encode(['status' => 'success', 'message' => 'Budget updated']);
+            echo json_encode(['status' => 'success', 'message' => 'Budget updated successfully']);
         } catch (PDOException $e) {
             http_response_code(500);
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);

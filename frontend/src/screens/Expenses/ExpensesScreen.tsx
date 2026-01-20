@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   MdArrowBack, MdCalendarToday, MdAdd, MdClose, MdAccountBalanceWallet,
-  MdCheckCircle, MdAccessTime, MdWarning, MdReceipt, MdTrendingUp,
-  MdAttachMoney, MdRefresh
+  MdCheckCircle, MdAccessTime, MdWarning, MdReceipt, MdTrendingUp
 } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -459,7 +458,16 @@ export const ExpensesScreen = () => {
                         <p className="text-sm font-bold text-outline dark:text-gray-400">No expenses recorded</p>
                     </div>
                 ) : (
-                    expenses.map((item, idx) => (
+                    expenses
+                    .filter(item => {
+                        // Filter out ADM (Admin) and PER (Personal) expenses for reception
+                        if (user?.role === 'reception') {
+                            const v = (item.voucher_no || '').toUpperCase();
+                            if (v.startsWith('ADM') || v.startsWith('PER')) return false;
+                        }
+                        return true;
+                    })
+                    .map((item, idx) => (
                         <div 
                             key={idx}
                             onClick={() => setSelectedExpense(item)} 

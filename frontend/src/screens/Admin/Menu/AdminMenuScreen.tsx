@@ -3,25 +3,46 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { 
-    LayoutDashboard, 
-    MessageCircle, 
-    BookOpen, 
-    LayoutGrid,
-    LogOut,
-    Wallet,
-    Users,
-    CheckCircle,
-    Building,
-    Share2,
-    User,
-    Bug,
-    Settings
-} from 'lucide-react';
+    MdDashboard, 
+    MdMessage, 
+    MdAccountBalanceWallet, 
+    MdGroups, 
+    MdVerified, 
+    MdStorefront, 
+    MdShare, 
+    MdPerson, 
+    MdBugReport, 
+    MdSettings,
+    MdChevronRight,
+    MdLogout,
+    MdWbSunny,
+    MdDarkMode,
+    MdFeedback,
+    MdLibraryBooks,
+    MdNotifications,
+    MdHistory,
+    MdAssessment
+} from 'react-icons/md';
+
+const ADMIN_URL = 'https://prospine.in/admin';
 
 const AdminMenuScreen: React.FC = () => {
     const navigate = useNavigate();
     const { user, logout } = useAuthStore();
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [isDark, setIsDark] = useState(document.documentElement.classList.contains('dark'));
+
+    const toggleTheme = () => {
+        if (isDark) {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+            setIsDark(false);
+        } else {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+            setIsDark(true);
+        }
+    };
 
     const handleLogout = () => {
         setShowLogoutModal(true);
@@ -34,211 +55,234 @@ const AdminMenuScreen: React.FC = () => {
 
     const menuItems = [
         { 
-            id: 'home', 
-            label: 'Home', 
-            desc: 'Dashboard Overview',
-            icon: <LayoutDashboard size={22} />, 
-            color: 'from-blue-500 to-blue-600',
-            bg: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+            id: 'dashboard', 
+            label: 'Dashboard', 
+            icon: <MdDashboard size={24} />, 
             link: '/admin/dashboard'
+        },
+        { 
+            id: 'notifications', 
+            label: 'Notifications', 
+            icon: <MdNotifications size={24} />, 
+            link: '/admin/notifications'
         },
         { 
             id: 'patients', 
             label: 'Patients', 
-            desc: 'Directory & Dues',
-            icon: <User size={22} />, 
-            color: 'from-emerald-500 to-emerald-600',
-            bg: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+            icon: <MdPerson size={24} />, 
             link: '/admin/patients'
         },
         { 
             id: 'chat', 
-            label: 'Chat', 
-            desc: 'Team Communication',
-            icon: <MessageCircle size={22} />, 
-            color: 'from-teal-500 to-teal-600',
-            bg: 'bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400',
+            label: 'Team Chat', 
+            icon: <MdMessage size={24} />, 
             link: '/admin/chat'
         },
         { 
             id: 'ledger', 
-            label: 'Ledger', 
-            desc: 'Financial Records',
-            icon: <BookOpen size={22} />, 
-            color: 'from-purple-500 to-purple-600',
-            bg: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
+            label: 'Financial Ledger', 
+            icon: <MdLibraryBooks size={24} />, 
             link: '/admin/ledger'
         },
         { 
             id: 'expenses', 
-            label: 'Expenses', 
-            desc: 'Approvals & Ops',
-            icon: <Wallet size={22} />, 
-            color: 'from-emerald-500 to-emerald-600',
-            bg: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+            label: 'Expense Approvals', 
+            icon: <MdAccountBalanceWallet size={24} />, 
             link: '/admin/expenses'
         },
         { 
             id: 'staff', 
-            label: 'Staff', 
-            desc: 'Member Directory',
-            icon: <Users size={22} />, 
-            color: 'from-orange-500 to-orange-600',
-            bg: 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400',
+            label: 'Employee Directory', 
+            icon: <MdGroups size={24} />, 
             link: '/admin/staff'
         },
         { 
             id: 'attendance', 
-            label: 'Attendance', 
-            desc: 'Approvals Queue',
-            icon: <CheckCircle size={22} />, 
-            color: 'from-amber-500 to-amber-600',
-            bg: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
+            label: 'Attendance Queue', 
+            icon: <MdVerified size={24} />, 
             link: '/admin/attendance'
         },
         { 
             id: 'branches', 
-            label: 'Branches', 
-            desc: 'Clinic Network',
-            icon: <Building size={22} />, 
-            color: 'from-teal-500 to-teal-600',
-            bg: 'bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400',
+            label: 'Clinic Network', 
+            icon: <MdStorefront size={24} />, 
             link: '/admin/branches'
         },
         { 
             id: 'referrals', 
-            label: 'Referrals', 
-            desc: 'Partner Mgmt',
-            icon: <Share2 size={22} />, 
-            color: 'from-blue-500 to-blue-600',
-            bg: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+            label: 'Referral Partners', 
+            icon: <MdShare size={24} />, 
             link: '/admin/referrals'
         },
         { 
             id: 'reception-config', 
-            label: 'Reception', 
-            desc: 'Master Data',
-            icon: <Settings size={22} />, 
-            color: 'from-cyan-500 to-cyan-600',
-            bg: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400',
+            label: 'Reception Config', 
+            icon: <MdSettings size={24} />, 
             link: '/admin/settings/reception'
         },
         { 
             id: 'feedback', 
-            label: 'Feedback', 
-            desc: 'Patient Ratings',
-            icon: <MessageCircle size={22} />, 
-            color: 'from-pink-500 to-pink-600',
-            bg: 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400',
+            label: 'Patient Feedback', 
+            icon: <MdFeedback size={24} />, 
             link: '/admin/feedback'
         },
         { 
             id: 'issues', 
-            label: 'Issues', 
-            desc: 'System Bugs',
-            icon: <Bug size={22} />, 
-            color: 'from-rose-500 to-rose-600',
-            bg: 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400',
+            label: 'System Issues', 
+            icon: <MdBugReport size={24} />, 
             link: '/admin/issues'
+        },
+        { 
+            id: 'records', 
+            label: 'System Records', 
+            icon: <MdHistory size={24} />, 
+            link: '/admin/records'
+        },
+        { 
+            id: 'reports', 
+            label: 'Reports & Analytics', 
+            icon: <MdAssessment size={24} />, 
+            link: '/admin/reports'
         }
     ];
 
     return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors pb-[env(safe-area-inset-bottom)]">
-            {/* Header */}
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md px-6 py-4 pt-[max(env(safe-area-inset-top),20px)] shadow-sm sticky top-0 z-20 border-b border-gray-100 dark:border-gray-700">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
-                        <LayoutGrid size={24} className="text-indigo-600 dark:text-indigo-400" />
-                    </div>
+        <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-black transition-colors pb-[env(safe-area-inset-bottom)] font-sans relative">
+            {/* Branded Header Gradient */}
+            <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-[#E0F2F1] via-[#E0F2F1]/30 to-transparent pointer-events-none z-0 dark:from-teal-900/10" />
+
+            {/* Minimal Header */}
+            <div className="px-6 py-6 pt-[max(env(safe-area-inset-top),32px)] relative z-10">
+                <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Menu</h1>
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Admin Controls</p>
+                        <h1 className="text-3xl font-light text-gray-900 dark:text-white tracking-tight">Admin Menu</h1>
+                        <p className="text-[10px] font-medium text-teal-600/70 uppercase tracking-[0.2em] mt-1">Physio EZ Control Center</p>
                     </div>
                 </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 pb-24 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto px-6 pb-32 no-scrollbar z-10">
                 
-                {/* User Profile Card */}
-                <div className="mb-6 bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                {/* Profile Strip */}
+                <div className="flex items-center justify-between mb-8 py-6 border-b border-gray-100 dark:border-gray-900">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-teal-400 to-teal-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-teal-500/30">
-                            {user?.name?.charAt(0) || 'A'}
+                        <div className="w-16 h-16 rounded-3xl bg-white dark:bg-gray-800 flex items-center justify-center text-teal-600 dark:text-teal-400 text-2xl font-light overflow-hidden shadow-sm border border-white dark:border-gray-800">
+                            {user?.photo ? (
+                                <img 
+                                    src={`${ADMIN_URL}/${user.photo}`} 
+                                    alt={user.name} 
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = 'none'; 
+                                        ((e.target as HTMLImageElement).nextSibling as HTMLElement).style.display = 'flex';
+                                    }}
+                                />
+                            ) : (
+                                <span>{user?.name?.charAt(0) || 'A'}</span>
+                            )}
+                            <span className="hidden w-full h-full items-center justify-center bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400">
+                                {user?.name?.charAt(0) || 'A'}
+                            </span>
                         </div>
                         <div>
-                            <h2 className="font-black text-gray-900 dark:text-white text-lg leading-tight">{user?.name || 'Admin'}</h2>
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{user?.role || 'Administrator'}</p>
+                            <h2 className="font-medium text-lg text-gray-900 dark:text-white">{user?.name || 'Administrator'}</h2>
+                            <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">{user?.role || 'Super Admin'}</p>
                         </div>
                     </div>
-                    <button 
-                        onClick={handleLogout} 
-                        className="p-3 rounded-full bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors active:scale-95"
-                        title="Logout"
-                    >
-                        <LogOut size={20} />
-                    </button>
                 </div>
 
-                {/* 3-Column Compact Grid */}
-                <div className="grid grid-cols-3 gap-3">
-                    {menuItems.map((item, index) => (
+                {/* List Layout with Professional Mono Icons */}
+                <div className="space-y-3">
+                    {menuItems.map((item) => (
                         <button 
                             key={item.id}
                             onClick={() => navigate(item.link)}
-                            className="group relative bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center aspect-square hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-                            style={{ animationDelay: `${index * 50}ms` }}
+                            className="w-full group bg-white dark:bg-zinc-900/40 p-4 rounded-[20px] flex items-center justify-between active:scale-[0.98] transition-all duration-300 border border-white dark:border-white/5 shadow-sm shadow-gray-200/50 dark:shadow-none hover:border-teal-500/30"
                         >
-                            <div className={`p-3 rounded-2xl mb-2 ${item.bg} group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
-                                {item.icon}
+                            <div className="flex items-center gap-4">
+                                <div className="text-gray-400 dark:text-gray-500 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                                    {item.icon}
+                                </div>
+                                <span className="font-medium text-[15px] text-gray-700 dark:text-gray-200">{item.label}</span>
                             </div>
-                            <h3 className="font-bold text-gray-900 dark:text-white text-[11px] leading-tight">{item.label}</h3>
-                            
-                            {/* Hover Gradient Overlay */}
-                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/0 to-gray-50/50 dark:from-transparent dark:to-gray-700/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                            <MdChevronRight size={20} className="text-gray-300 dark:text-gray-700 group-hover:translate-x-1 transition-transform" />
                         </button>
                     ))}
                 </div>
 
+                {/* System Controls */}
+                <div className="mt-8 space-y-3 pt-6 border-t border-gray-100 dark:border-gray-900">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4 mb-2">System Preferences</p>
+                    
+                    <button 
+                        onClick={toggleTheme} 
+                        className="w-full group bg-white dark:bg-zinc-900/40 p-4 rounded-[20px] flex items-center justify-between active:scale-[0.98] transition-all duration-300 border border-white dark:border-white/5 shadow-sm"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="text-gray-400 group-hover:text-teal-500 transition-colors">
+                                {isDark ? <MdWbSunny size={24} /> : <MdDarkMode size={24} />}
+                            </div>
+                            <span className="font-medium text-[15px] text-gray-700 dark:text-gray-200">Appearance</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{isDark ? 'Dark' : 'Light'}</span>
+                            <div className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 ${isDark ? 'bg-teal-600/20' : 'bg-gray-100'}`}>
+                                <div className={`w-4 h-4 rounded-full bg-teal-500 shadow-sm transition-transform duration-300 ${isDark ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button 
+                        onClick={handleLogout} 
+                        className="w-full group bg-gradient-to-br from-white via-rose-50/20 to-white dark:from-zinc-900 dark:via-rose-950/20 dark:to-zinc-900 p-4 rounded-[20px] flex items-center justify-between active:scale-[0.98] transition-all duration-300 border border-rose-100 dark:border-rose-900/30 shadow-sm"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="text-rose-500">
+                                <MdLogout size={24} />
+                            </div>
+                            <span className="font-medium text-[15px] text-rose-500">Sign Out Account</span>
+                        </div>
+                    </button>
+                </div>
+
                 {/* Footer Credits */}
-                <div className="mt-8 mb-6 text-center">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">CareSyncOS Admin</p>
-                    <p className="text-xs font-bold text-gray-600 dark:text-gray-300">
-                        v2.5.0
-                    </p>
+                <div className="mt-12 text-center pb-12">
+                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-[0.4em]">Physio EZ • v3.0.0</p>
+                    <div className="mt-4 flex items-center justify-center gap-1.5 opacity-30">
+                        <div className="w-1 h-1 rounded-full bg-gray-400" />
+                        <div className="w-1 h-1 rounded-full bg-gray-400" />
+                        <div className="w-1 h-1 rounded-full bg-gray-400" />
+                    </div>
                 </div>
             </div>
 
-            {/* Logout Confirmation Modal */}
+            {/* Logout Modal */}
             {showLogoutModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in p-4">
                     <div 
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" 
-                        onClick={() => setShowLogoutModal(false)}
-                    ></div>
-                    <div className="relative bg-white dark:bg-gray-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200">
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <LogOut size={28} strokeWidth={2.5} />
-                            </div>
-                            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">Logout?</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                                Are you sure you want to sign out of your admin account?
-                            </p>
+                        className="bg-white dark:bg-black w-full sm:max-w-xs rounded-[32px] shadow-2xl p-8 mb-20 sm:mb-0 border border-gray-100 dark:border-white/5 animate-slide-up"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="w-16 h-16 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-2xl flex items-center justify-center mb-6">
+                            <MdLogout size={32} />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button 
-                                onClick={() => setShowLogoutModal(false)} 
-                                className="py-3.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-bold rounded-2xl transition-colors active:scale-95"
-                            >
-                                Cancel
-                            </button>
+                        <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2 tracking-tight">Sign out?</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed mb-8">
+                            Are you sure you want to exit?
+                        </p>
+                        <div className="flex flex-col gap-3">
                             <button 
                                 onClick={confirmLogout} 
-                                className="py-3.5 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl shadow-lg shadow-red-500/20 transition-all active:scale-95"
+                                className="w-full py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold rounded-2xl text-sm transition-all active:scale-[0.98]"
                             >
-                                Yes, Logout
+                                Sign Out
+                            </button>
+                            <button 
+                                onClick={() => setShowLogoutModal(false)} 
+                                className="w-full py-4 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 font-bold rounded-2xl text-sm transition-all active:scale-[0.98]"
+                            >
+                                Cancel
                             </button>
                         </div>
                     </div>

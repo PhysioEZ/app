@@ -9,6 +9,16 @@ header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers
 
 // Error Handling for Debugging
 ini_set('display_errors', '0');
+
+// DEBUG: Catch all requests
+$debugFile = '/tmp/admin_expenses_debug.log';
+$inputRaw = file_get_contents("php://input");
+$inputData = json_decode($inputRaw, true);
+$logMsg = date('Y-m-d H:i:s') . " - Request: " . $_SERVER['REQUEST_METHOD'] . "\n";
+$logMsg .= "Params: " . json_encode($_GET) . "\n";
+$logMsg .= "Body: " . $inputRaw . "\n";
+file_put_contents($debugFile, $logMsg, FILE_APPEND);
+
 register_shutdown_function(function() {
     $error = error_get_last();
     if ($error && ($error['type'] === E_ERROR || $error['type'] === E_PARSE || $error['type'] === E_CORE_ERROR || $error['type'] === E_COMPILE_ERROR)) {
@@ -91,9 +101,13 @@ if ($method === 'GET') {
             WHERE 1=1
         ";
 
-        // Filter by Type (Clinic vs Admin)
+        // Filter by Type (Clinic vs Admin vs Personal)
         if ($type === 'admin') {
             $whereClauses[] = "r.role_name IN ('admin', 'superadmin')";
+            $whereClauses[] = "e.voucher_no LIKE 'ADM-EXP-%'";
+        } elseif ($type === 'personal') {
+            $whereClauses[] = "r.role_name IN ('admin', 'superadmin')";
+            $whereClauses[] = "e.voucher_no LIKE 'PER-EXP-%'";
         } else {
             // Clinic = Reception
             $whereClauses[] = "r.role_name = 'reception'";
@@ -257,7 +271,18 @@ if ($method === 'GET') {
         exit;
     }
 
-    if ($action === 'create_admin_expense') {
+    if ($action === 'get_categories') {
+        try {
+            $stmt = $pdo->query("SELECT category_id, category_name FROM expense_categories WHERE is_active = 1 ORDER BY category_name ASC");
+            $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['status' => 'success', 'data' => $categories]);
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    if ($action === 'create_admin_expense' || $action === 'create_personal_expense') {
         try {
             // Validation
             $branchId = intval($data['branch_id'] ?? 0);
@@ -273,22 +298,37 @@ if ($method === 'GET') {
                 throw new Exception("Missing required fields");
             }
 
-            // Generate Voucher
-            $voucherNo = 'ADM-EXP-' . strtoupper(uniqid());
+            // Generate Voucher Prefix based on action
+            $manualVoucherNo = trim($data['manual_voucher_no'] ?? '');
+            
+            if (!empty($manualVoucherNo)) {
+                $voucherNo = $manualVoucherNo;
+            } else {
+                $prefix = ($action === 'create_personal_expense') ? 'PER-EXP-' : 'ADM-EXP-';
+                $voucherNo = $prefix . strtoupper(uniqid());
+            }
 
             // Amount in Words Helper
             $amountInWords = "Rupees " . number_format($amount, 2) . " Only";
 
             $pdo->beginTransaction();
 
+            // Check and Save New Category if needed
+            $stmtCheckCat = $pdo->prepare("SELECT category_id FROM expense_categories WHERE category_name = ?");
+            $stmtCheckCat->execute([$category]);
+            if (!$stmtCheckCat->fetch()) {
+                $stmtNewCat = $pdo->prepare("INSERT INTO expense_categories (category_name, is_active) VALUES (?, 1)");
+                $stmtNewCat->execute([$category]);
+            }
+
             $stmt = $pdo->prepare("
                 INSERT INTO expenses (
-                    branch_id, user_id, employee_id, voucher_no, expense_date, 
+                    branch_id, user_id, employee_id, voucher_no, manual_voucher_no, expense_date, 
                     paid_to, expense_done_by, expense_for, description, 
                     amount, amount_in_words, payment_method, cheque_details, status, 
                     approved_by_user_id, approved_at, created_at, updated_at
                 ) VALUES (
-                    :branch_id, :user_id, :employee_id, :voucher_no, :expense_date, 
+                    :branch_id, :user_id, :employee_id, :voucher_no, :manual_voucher_no, :expense_date, 
                     :paid_to, :expense_done_by, :expense_for, :description, 
                     :amount, :amount_in_words, :payment_method, :cheque_details, 'approved', 
                     :approved_by_user_id, NOW(), NOW(), NOW()
@@ -298,8 +338,9 @@ if ($method === 'GET') {
             $stmt->execute([
                 ':branch_id' => $branchId,
                 ':user_id' => $adminUserId,
-                ':employee_id' => $adminUserId, // Using adminUserId as employee_id
+                ':employee_id' => $adminUserId,
                 ':voucher_no' => $voucherNo,
+                ':manual_voucher_no' => $manualVoucherNo,
                 ':expense_date' => $expenseDate,
                 ':paid_to' => $paidTo,
                 ':expense_done_by' => $adminUsername,
@@ -314,7 +355,6 @@ if ($method === 'GET') {
             
             $newId = $pdo->lastInsertId();
 
-            // Log Activity
             if (function_exists('log_activity')) {
                 log_activity($pdo, $adminUserId, $adminUsername, $branchId, 'CREATE', 'expenses', (int)$newId, null, ['amount' => $amount, 'voucher' => $voucherNo]);
             }
@@ -371,6 +411,61 @@ if ($method === 'GET') {
                 // Log Activity
                 if (function_exists('log_activity')) {
                     log_activity($pdo, $adminUserId, $adminUsername, $detailsBefore['branch_id'], 'UPDATE', 'expenses', $expenseId, $detailsBefore, $detailsAfter);
+                }
+
+                // --- Notify the Expense Creator ---
+                $creatorId = (int)($detailsBefore['user_id'] ?? 0);
+                
+                // --- Notify the Expense Creator ---
+                $creatorId = (int)($detailsBefore['user_id'] ?? 0);
+                
+                if ($creatorId > 0) {
+                    $branchId = (int)($detailsBefore['branch_id'] ?? 0);
+                    $vNo = $detailsBefore['voucher_no'] ?? 'Unknown';
+                    $statusStr = ucfirst($newStatus);
+                    
+                    $msg = "Expense #{$vNo} has been {$statusStr}";
+                    $link = "expenses.php?search=" . $vNo; 
+
+                    // 1. DB Notification
+                    try {
+                        $notifSql = "INSERT INTO notifications (employee_id, branch_id, message, link_url, created_by_employee_id, created_at) 
+                                     VALUES (?, ?, ?, ?, ?, NOW())";
+                        $notifStmt = $pdo->prepare($notifSql);
+                        $notifStmt->execute([$creatorId, $branchId, $msg, $link, $adminUserId]);
+                    } catch (Exception $e) {
+                         error_log("Notification Insert Error: " . $e->getMessage());
+                    }
+
+                    // 2. Push Notification
+                    try {
+                        // Robust Path Checking (borrowed from notifications.php)
+                        $pushPaths = [
+                            __DIR__ . '/../../../../common/send_push.php',     // Standard Relative
+                            __DIR__ . '/../../../common/send_push.php',        // Fallback Relative
+                            '/srv/http/admin/common/send_push.php',            // Absolute Server Path
+                            $_SERVER['DOCUMENT_ROOT'] . '/admin/common/send_push.php' // Document Root Fallback
+                        ];
+                        
+                        $pushLoaded = false;
+                        foreach ($pushPaths as $path) {
+                            if (file_exists($path)) {
+                                require_once $path;
+                                $pushLoaded = true;
+                                break;
+                            }
+                        }
+
+                        if ($pushLoaded && function_exists('sendDetailsNotification')) {
+                            $title = "Expense Update";
+                            // Pass PDO explicitly to be safe
+                            sendDetailsNotification($creatorId, $title, $msg, ['link' => $link], $pdo);
+                        } else {
+                            error_log("Push Notification Error: send_push.php not found or function missing.");
+                        }
+                    } catch (Exception $e) {
+                        error_log("Push Notification Error: " . $e->getMessage());
+                    }
                 }
 
                 $pdo->commit();

@@ -16,10 +16,10 @@ $response = [
     'status' => 'success',
     'data' => [
         'releases' => [
-            // LATEST RELEASE (v3.0.0)
+            // LATEST RELEASE (v3.1.0)
             [
-                'version' => '3.0.0',
-                'date' => 'Jan 18, 2026',
+                'version' => '3.1.0',
+                'date' => 'Jan 20, 2026',
                 'description' => 'Complete Material Design 3 UI Overhaul: Premium card-based layouts, enhanced visual hierarchy, and comprehensive dark mode support across all screens.',
                 'features' => [
                     ['title' => 'Material Design 3', 'desc' => 'Complete UI redesign with Google Material You design system'],

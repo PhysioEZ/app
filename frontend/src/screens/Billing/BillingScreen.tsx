@@ -11,10 +11,7 @@ import {
   MdCheckCircle,
   MdReceipt,
   MdWarning,
-  MdSmartphone,
-  MdAttachMoney,
-  MdFilterList,
-  MdPerson
+  MdSmartphone
 } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';

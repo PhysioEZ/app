@@ -2,5 +2,8 @@ node_modules
 node_modules
 
 frontend/.env
-admin
+# admin
 .vscode
+.bak
+.apk
+# .json

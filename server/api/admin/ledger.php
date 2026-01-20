@@ -137,7 +137,8 @@ try {
                 r.payment_method
             FROM registration r
             LEFT JOIN branches b ON r.branch_id = b.branch_id
-            WHERE r.status NOT IN ('closed', 'cancelled') AND r.consultation_amount > 0
+            WHERE r.created_at BETWEEN :start1 AND :end1
+            AND r.status NOT IN ('closed', 'cancelled') AND r.consultation_amount > 0
 
             UNION ALL
 
@@ -152,7 +153,8 @@ try {
                 t.payment_method
             FROM tests t
             LEFT JOIN branches b ON t.branch_id = b.branch_id
-            WHERE t.test_status != 'cancelled' AND t.advance_amount > 0
+            WHERE t.visit_date BETWEEN :start2 AND :end2
+            AND t.test_status != 'cancelled' AND t.advance_amount > 0
 
             UNION ALL
 
@@ -169,7 +171,8 @@ try {
             JOIN patients pt ON p.patient_id = pt.patient_id
             JOIN registration r ON pt.registration_id = r.registration_id
             LEFT JOIN branches b ON pt.branch_id = b.branch_id
-            WHERE p.amount > 0
+            WHERE p.payment_date BETWEEN :start3 AND :end3
+            AND p.amount > 0
 
             UNION ALL
 
@@ -184,15 +187,20 @@ try {
                 e.payment_method
             FROM expenses e
             LEFT JOIN branches b ON e.branch_id = b.branch_id
-            WHERE e.status = 'approved'
+            WHERE e.expense_date BETWEEN :start4 AND :end4
+            AND e.status = 'approved'
         ) AS all_transactions
-        WHERE date BETWEEN :start_date AND :end_date
-        $whereBranch
+        WHERE 1=1 $whereBranch
         ORDER BY date ASC, credit DESC
     ";
 
     $stmt = $pdo->prepare($sql_txns);
-    $stmt->execute($txnParams);
+    $stmt->execute([
+        ':start1' => $start_date, ':end1' => $end_date . ' 23:59:59',
+        ':start2' => $start_date, ':end2' => $end_date . ' 23:59:59',
+        ':start3' => $start_date, ':end3' => $end_date . ' 23:59:59',
+        ':start4' => $start_date, ':end4' => $end_date . ' 23:59:59'
+    ] + ($branch_id > 0 ? [':branch_id' => $branch_id] : []));
     $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // 3. Process Daily Summaries

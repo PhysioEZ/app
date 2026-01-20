@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   MdArrowBack, MdConfirmationNumber, MdAccessTime, MdCheckCircle, MdUpload, 
   MdReply, MdClose, MdRefresh, MdHelpOutline, MdMessage, MdDescription, 
-  MdImage, MdTrendingUp
+  MdImage
 } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';

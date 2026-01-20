@@ -10,9 +10,43 @@ header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
 // Adjust paths to common files - New location is /admin/mobile/api
-require_once '../../common/db.php';
-require_once '../../common/config.php'; 
+// Database Access
+$dbPaths = [
+    __DIR__ . '/../../../common/db.php',
+    __DIR__ . '/../../common/db.php',
+    '/srv/http/admin/common/db.php'
+];
 
+$dbFound = false;
+foreach ($dbPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $dbFound = true;
+        break;
+    }
+}
+
+// Config Access
+$configPaths = [
+    __DIR__ . '/../../../common/config.php',
+    __DIR__ . '/../../common/config.php',
+    '/srv/http/admin/common/config.php'
+];
+
+$configFound = false;
+foreach ($configPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $configFound = true;
+        break;
+    }
+}
+
+if (!$dbFound) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Database configuration not found']);
+    exit;
+}
 // Adjust paths to common files
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -274,16 +308,44 @@ if ($action === 'send') {
         $stmt->execute([$currentEmployeeId, $receiverId, $messageType, $messageContent]);
 
         // Notification Logic
-        $senderName = 'Colleague'; // Fallback
-        // Ideally fetch sender name, but keeping it simple. Notification system handles display.
-        $notificationMessage = "New message";
+        $senderName = 'Colleague';
+        try {
+            $stmtSender = $pdo->prepare("SELECT first_name FROM employees WHERE employee_id = ?");
+            $stmtSender->execute([$currentEmployeeId]);
+            $senderFirstName = $stmtSender->fetchColumn();
+            if ($senderFirstName) $senderName = $senderFirstName;
+        } catch (Exception $e) {}
 
-        $linkUrl = "chat_with_employee_id:" . $currentEmployeeId;
+        $notificationMessage = ($messageType === 'text') ? $messageText : "Sent a " . $messageType;
+        if (strlen($notificationMessage) > 100) {
+            $notificationMessage = substr($notificationMessage, 0, 97) . "...";
+        }
+
+        $linkUrl = "chat:" . $currentEmployeeId;
 
         $stmt_notif = $pdo->prepare(
             "INSERT INTO notifications (employee_id, created_by_employee_id, branch_id, message, link_url) VALUES (?, ?, ?, ?, ?)"
         );
-        $stmt_notif->execute([$receiverId, $currentEmployeeId, $branchId, $notificationMessage, $linkUrl]);
+        $stmt_notif->execute([$receiverId, $currentEmployeeId, $branchId, "New message from " . $senderName, $linkUrl]);
+
+        // Trigger Push Notification
+        // Trigger Push Notification
+        $pushPaths = [
+            __DIR__ . '/../../../common/send_push.php',
+            __DIR__ . '/../../common/send_push.php',
+            '/srv/http/admin/common/send_push.php'
+        ];
+        
+        foreach ($pushPaths as $path) {
+            if (file_exists($path)) {
+                require_once $path;
+                break;
+            }
+        }
+        
+        if (function_exists('sendDetailsNotification')) {
+            sendDetailsNotification($receiverId, "New Message from " . $senderName, $notificationMessage, ['link' => $linkUrl]);
+        }
 
         echo json_encode(['success' => true]);
 

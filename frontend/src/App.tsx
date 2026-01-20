@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { SplashScreen, LoginScreen } from './screens/Auth';
 import ChatScreen from './screens/Chat/ChatScreen';
+import AdminChatScreen from './screens/Admin/Chat/AdminChatScreen';
 import { DashboardScreen } from './screens/Dashboard';
 import { PatientsScreen, PatientProfileScreen } from './screens/Patients';
 import { AppointmentsScreen } from './screens/Appointments';
@@ -13,7 +14,7 @@ import { RegistrationScreen, NewRegistrationScreen } from './screens/Registratio
 import { AttendanceScreen } from './screens/Attendance';
 import { BillingScreen } from './screens/Billing';
 import { TestsScreen, CreateTestScreen } from './screens/Tests';
-import { ReportsScreen } from './screens/Reports';
+// ReportsScreen removed as it is unused
 import { ExpensesScreen } from './screens/Expenses/ExpensesScreen';
 import { SupportScreen } from './screens/Support/SupportScreen';
 import { AboutScreen } from './screens/About/AboutScreen';
@@ -35,15 +36,20 @@ import AttendanceApprovalScreen from './screens/Admin/Attendance/AttendanceAppro
 import BranchManagementScreen from './screens/Admin/Branches/BranchManagementScreen';
 import BranchDetailScreen from './screens/Admin/Branches/BranchDetailScreen';
 import ReferralManagementScreen from './screens/Admin/Referrals/ReferralManagementScreen';
+import ReferralDriftScreen from './screens/Admin/Referrals/ReferralDriftScreen';
+import RetentionRadarScreen from './screens/Admin/Retention/RetentionRadarScreen';
 import AdminPatientDetailScreen from './screens/Admin/Patients/PatientDetailScreen';
 import AdminPatientsScreen from './screens/Admin/Patients/PatientsScreen';
 import ReceptionSettingsScreen from './screens/Admin/Settings/ReceptionSettingsScreen';
+import SystemRecordsScreen from './screens/Admin/Records/SystemRecordsScreen';
+import AdminReportsScreen from './screens/Admin/Reports/ReportsScreen';
 import UpdateModal from './components/UpdateModal';
 import { useAuthStore } from './store/useAuthStore';
+import { usePushNotifications } from './hooks/usePushNotifications';
 
 // App Version
-const CURRENT_VERSION = '2.5.0';
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://prospine.in/admin/mobile/api';
+const CURRENT_VERSION = '3.0.0';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.69/admin/app/server/api';
 
 // Helper for Role-based redirection
 const RootRedirect = () => {
@@ -67,6 +73,9 @@ function App() {
   const [showSplash, setShowSplash] = useState(!hasSeenSplash);
   
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  
+  // Initialize Push Notifications
+  usePushNotifications();
 
   // Update State
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -106,24 +115,20 @@ function App() {
       checkUpdate();
   }, []);
 
-  const compareVersions = (v1: string, v2: string) => {
-      const p1 = v1.split('.').map(Number);
-      const p2 = v2.split('.').map(Number);
-      for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
-          const n1 = p1[i] || 0;
-          const n2 = p2[i] || 0;
-          if (n1 > n2) return 1;
-          if (n1 < n2) return -1;
-      }
-      return 0;
+  const compareVersions = (serverVersion: string, currentVersion: string) => {
+      console.log('Comparing versions:', { serverVersion, currentVersion });
+      return serverVersion !== currentVersion && serverVersion > currentVersion ? 1 : 0;
   };
 
   if (showSplash) {
+    console.log("Rendering SplashScreen");
     return <SplashScreen />;
   }
 
+  console.log("Rendering Main App - Auth status:", isAuthenticated);
+
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         {/* Public Routes */}
         <Route 
@@ -135,8 +140,8 @@ function App() {
         {/* Admin Routes */}
         <Route element={<AdminLayout />}>
            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-           <Route path="/admin/chat" element={<ChatScreen />} />
-           <Route path="/admin/chat/:id" element={<ChatScreen />} />
+           <Route path="/admin/chat" element={<AdminChatScreen />} />
+           <Route path="/admin/chat/:id" element={<AdminChatScreen />} />
            <Route path="/admin/ledger" element={<LedgerScreen />} />
            <Route path="/admin/expenses" element={<AdminExpensesScreen />} />
            <Route path="/admin/notifications" element={<AdminNotificationsScreen />} />
@@ -150,8 +155,12 @@ function App() {
             <Route path="/admin/patients/:id" element={<AdminPatientDetailScreen />} />
             <Route path="/admin/feedback" element={<AdminFeedbackScreen />} />
             <Route path="/admin/issues" element={<IssueManagementScreen />} />
+            <Route path="/admin/retention" element={<RetentionRadarScreen />} />
+            <Route path="/admin/referrals/drift" element={<ReferralDriftScreen />} />
             <Route path="/admin/settings/reception" element={<ReceptionSettingsScreen />} />
             <Route path="/admin/menu" element={<AdminMenuScreen />} />
+            <Route path="/admin/records" element={<SystemRecordsScreen />} />
+            <Route path="/admin/reports" element={<AdminReportsScreen />} />
         </Route>
 
         {/* Reception/Staff Routes */}
@@ -172,7 +181,7 @@ function App() {
           <Route path="/billing" element={<BillingScreen />} />
           <Route path="/tests" element={<TestsScreen />} />
           <Route path="/tests/new" element={<CreateTestScreen />} />
-          <Route path="/reports" element={<ReportsScreen />} /> 
+          <Route path="/reports" element={<AdminReportsScreen />} />  
           <Route path="/expenses" element={<ExpensesScreen />} />
           <Route path="/support" element={<SupportScreen />} />
           <Route path="/about" element={<AboutScreen />} />
@@ -195,7 +204,7 @@ function App() {
               onClose={() => setShowUpdateModal(false)}
           />
       )}
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 

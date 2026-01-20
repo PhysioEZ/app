@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-    ChevronLeft, Building, MapPin, 
-    Phone, Mail, CreditCard, Shield, XCircle
-} from 'lucide-react';
+    MdChevronLeft, MdBusiness, MdLocationOn, 
+    MdPhone, MdMailOutline, 
+    MdErrorOutline, MdEdit, MdClose
+} from 'react-icons/md';
 import { useAuthStore } from '../../../store/useAuthStore';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://prospine.in/admin/mobile/api';
@@ -36,6 +37,11 @@ const BranchDetailScreen: React.FC = () => {
     const { user } = useAuthStore();
     const [branch, setBranch] = useState<Branch | null>(null);
     const [loading, setLoading] = useState(true);
+    
+    // Budget Edit State
+    const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+    const [newBudget, setNewBudget] = useState('');
+    const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         fetchBranchDetail();
@@ -51,11 +57,40 @@ const BranchDetailScreen: React.FC = () => {
             if (json.status === 'success') {
                 const found = json.data.find((b: Branch) => b.branch_id === parseInt(branchId));
                 setBranch(found || null);
+                if (found) setNewBudget(found.current_budget?.toString() || '');
             }
         } catch (e) {
             console.error(e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSaveBudget = async () => {
+        if (!user || !branch) return;
+        setSubmitting(true);
+        try {
+            const empId = user?.employee_id || user?.id;
+            const res = await fetch(`${API_URL}/admin/branches.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'save_budget',
+                    user_id: empId,
+                    branch_id: branch.branch_id,
+                    daily_budget_amount: newBudget,
+                    effective_from_date: new Date().toISOString().split('T')[0]
+                })
+            });
+            const json = await res.json();
+            if (json.status === 'success') {
+                setIsBudgetModalOpen(false);
+                fetchBranchDetail();
+            }
+        } catch (ex) {
+            console.error(ex);
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -70,193 +105,153 @@ const BranchDetailScreen: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] dark:bg-[#0f172a]">
-                <div className="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin"></div>
+            <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8fafc] dark:bg-black gap-4 opacity-40">
+                <div className="w-8 h-8 border-2 border-transparent border-t-teal-500 rounded-full animate-spin" />
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] italic">Loading Branch...</p>
             </div>
         );
     }
 
     if (!branch) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8fafc] dark:bg-[#0f172a] p-6 text-center">
-                <XCircle size={48} className="text-rose-500 mb-4" />
-                <h2 className="text-xl font-black text-gray-900 dark:text-white mb-2">Branch Not Found</h2>
-                <p className="text-sm text-gray-500 mb-6">The branch you're looking for doesn't exist.</p>
-                <button 
-                    onClick={() => navigate('/admin/branches')}
-                    className="px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl font-bold text-sm"
-                >
-                    Back to Directory
-                </button>
+            <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8fafc] dark:bg-black p-10 text-center">
+                <MdErrorOutline size={48} className="text-gray-200 mb-4" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Not Found</h2>
+                <button onClick={() => navigate('/admin/branches')} className="mt-6 px-8 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl font-bold text-sm">Go Back</button>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#f8fafc] dark:bg-[#0f172a] transition-colors duration-200 font-sans relative overflow-hidden">
+        <div className="flex flex-col min-h-screen bg-[#f8fafc] dark:bg-black transition-colors duration-200 font-sans relative overflow-hidden">
             
-            {/* Ambient Background Blobs */}
-            <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-                <div className="absolute -top-[10%] -right-[10%] w-[50%] h-[50%] rounded-full bg-teal-400/10 dark:bg-teal-900/10 blur-3xl"></div>
-                <div className="absolute top-[20%] -left-[10%] w-[40%] h-[40%] rounded-full bg-indigo-400/10 dark:bg-indigo-900/10 blur-3xl"></div>
-            </div>
-
-            {/* Header */}
-            <header className="px-6 py-4 pt-11 flex items-center gap-4 sticky top-0 z-30 bg-white/70 dark:bg-[#0f172a]/70 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50">
+            {/* Simple Branded Header */}
+            <header className="px-5 py-4 pt-[max(env(safe-area-inset-top),16px)] flex items-center gap-4 sticky top-0 z-40 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-100 dark:border-white/5 transition-all">
                 <button 
-                    onClick={() => navigate('/admin/branches')}
-                    className="w-9 h-9 rounded-full bg-white dark:bg-gray-800/50 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 active:scale-95 transition-transform backdrop-blur-sm"
+                    onClick={() => navigate(-1)}
+                    className="w-10 h-10 rounded-2xl bg-white dark:bg-zinc-900 shadow-sm border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-500 active:scale-90 transition-transform"
                 >
-                    <ChevronLeft size={18} />
+                    <MdChevronLeft size={24} />
                 </button>
                 <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Branch Details</p>
-                    <h1 className="text-lg font-black text-gray-900 dark:text-white tracking-tight truncate">{branch.branch_name}</h1>
+                    <h1 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight leading-none italic">{branch.branch_name}</h1>
                 </div>
-                <div className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wide ${
-                    branch.is_active 
-                        ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' 
-                        : 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400'
-                }`}>
-                    {branch.is_active ? 'Active' : 'Inactive'}
+                <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest ${branch.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                    {branch.is_active ? 'Live' : 'Offline'}
                 </div>
             </header>
 
-            {/* Content */}
-            <main className="flex-1 p-4 md:p-6 overflow-y-auto z-10 pb-24">
+            <main className="flex-1 p-5 space-y-6 overflow-y-auto no-scrollbar relative z-10 pb-32">
                 
-                {/* Branch Identity Card */}
-                <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 mb-4">
-                    <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center overflow-hidden border border-gray-100 dark:border-gray-700">
-                            {branch.logo_primary_path ? (
-                                <img src={getImageUrl(branch.logo_primary_path)} className="w-full h-full object-contain" />
-                            ) : (
-                                <Building className="text-gray-400" size={28} />
-                            )}
-                        </div>
-                        <div className="flex-1">
-                            <h3 className="text-lg font-black text-gray-900 dark:text-white tracking-tight">{branch.branch_name}</h3>
-                            <p className="text-[10px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">{branch.clinic_name}</p>
-                            <p className="text-[10px] font-bold text-gray-400 mt-1">ID: #{branch.branch_id}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Contact Grid */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-500">
-                                <Phone size={14} />
-                            </div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Phone</span>
-                        </div>
-                        <p className="text-sm font-bold text-gray-900 dark:text-white">{branch.phone_primary}</p>
-                        {branch.phone_secondary && (
-                            <p className="text-xs text-gray-500 mt-1">{branch.phone_secondary}</p>
+                {/* Compact Info Card */}
+                <div className="bg-white dark:bg-zinc-900/50 rounded-[32px] p-6 shadow-sm border border-gray-100 dark:border-white/5 flex items-center gap-5">
+                    <div className="w-16 h-16 rounded-3xl bg-gray-50 dark:bg-black flex items-center justify-center p-2 border border-gray-100 dark:border-white/5">
+                        {branch.logo_primary_path ? (
+                            <img src={getImageUrl(branch.logo_primary_path)} className="w-full h-full object-contain" alt="" />
+                        ) : (
+                            <MdBusiness className="text-gray-200" size={32} />
                         )}
                     </div>
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500">
-                                <Mail size={14} />
-                            </div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Email</span>
-                        </div>
-                        <p className="text-sm font-bold text-gray-900 dark:text-white break-all">{branch.email || 'N/A'}</p>
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-none">{branch.branch_name}</h2>
+                        <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mt-1.5">{branch.clinic_name}</p>
                     </div>
                 </div>
 
-                {/* Location Card */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 mb-4">
-                    <div className="flex items-center gap-2 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-500">
-                            <MapPin size={18} />
-                        </div>
-                        <h3 className="text-base font-black text-gray-900 dark:text-white tracking-tight">Location</h3>
-                    </div>
-                    <div className="space-y-3">
+                {/* Budget Section (Now Editable) */}
+                <div className="bg-gray-900 dark:bg-zinc-900 p-6 rounded-[32px] text-white shadow-xl relative overflow-hidden group">
+                    <div className="flex justify-between items-start mb-6">
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Address</p>
-                            <p className="text-sm text-gray-700 dark:text-gray-300">
-                                {branch.address_line_1}
-                                {branch.address_line_2 && <><br/>{branch.address_line_2}</>}
-                            </p>
+                            <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Daily Budget</p>
+                            <h3 className="text-3xl font-light italic tracking-tighter">
+                                ₹{branch.current_budget ? Number(branch.current_budget).toLocaleString() : '---'}
+                            </h3>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">City & State</p>
-                                <p className="text-sm font-bold text-gray-900 dark:text-white">{branch.city}, {branch.state}</p>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-700/30 p-3 rounded-xl">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Pincode</p>
-                                <p className="text-sm font-black text-gray-900 dark:text-white font-mono">{branch.pincode}</p>
-                            </div>
-                        </div>
+                        <button 
+                            onClick={() => setIsBudgetModalOpen(true)}
+                            className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all active:scale-95"
+                        >
+                            <MdEdit size={20} />
+                        </button>
                     </div>
+                    <div className="h-px w-full bg-white/5 mb-4" />
+                    <p className="text-[9px] font-medium text-white/30 italic">Daily cap for reception and small expenses.</p>
                 </div>
 
-                {/* Admin Card */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 mb-4">
-                    <div className="flex items-center gap-2 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center text-teal-500">
-                            <Shield size={18} />
-                        </div>
-                        <h3 className="text-base font-black text-gray-900 dark:text-white tracking-tight">Branch Admin</h3>
+                {/* Grid for Contact & Admin */}
+                <div className="grid grid-cols-1 gap-4">
+                    <div className="bg-white dark:bg-zinc-900/50 p-5 rounded-[28px] border border-gray-100 dark:border-white/5">
+                         <div className="flex items-center gap-3 mb-4 text-gray-400">
+                            <MdPhone size={18} />
+                            <span className="text-[9px] font-black uppercase tracking-widest">Phone Details</span>
+                         </div>
+                         <p className="text-sm font-bold text-gray-900 dark:text-white">{branch.phone_primary}</p>
+                         {branch.phone_secondary && <p className="text-xs text-gray-400 mt-1">{branch.phone_secondary} (Alt)</p>}
+                         
+                         <div className="my-4 h-px bg-gray-50 dark:bg-white/5" />
+                         
+                         <div className="flex items-center gap-3 mb-4 text-gray-400">
+                            <MdMailOutline size={18} />
+                            <span className="text-[9px] font-black uppercase tracking-widest">Email</span>
+                         </div>
+                         <p className="text-sm font-bold text-gray-900 dark:text-white">{branch.email || 'N/A'}</p>
                     </div>
-                    <div className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-2xl">
-                        <div className="w-12 h-12 rounded-2xl bg-teal-500 flex items-center justify-center text-white text-lg font-black">
-                            {branch.admin_first_name[0]}{branch.admin_last_name[0]}
-                        </div>
-                        <div>
-                            <p className="font-black text-gray-900 dark:text-white">{branch.admin_first_name} {branch.admin_last_name}</p>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Branch Supervisor</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 mt-3">
-                        <div className="bg-gray-50 dark:bg-gray-700/30 p-2 rounded-xl text-center">
-                            <p className="text-[9px] font-bold text-gray-400 uppercase">ID</p>
-                            <p className="text-sm font-black text-gray-900 dark:text-white">#{branch.branch_id}</p>
-                        </div>
-                        <div className="bg-gray-50 dark:bg-gray-700/30 p-2 rounded-xl text-center">
-                            <p className="text-[9px] font-bold text-gray-400 uppercase">Est.</p>
-                            <p className="text-sm font-black text-gray-900 dark:text-white">{new Date(branch.created_at).getFullYear()}</p>
-                        </div>
-                        <div className="bg-gray-50 dark:bg-gray-700/30 p-2 rounded-xl text-center">
-                            <p className="text-[9px] font-bold text-gray-400 uppercase">Currency</p>
-                            <p className="text-sm font-black text-gray-900 dark:text-white">INR</p>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Budget Card */}
-                <div className="bg-gradient-to-br from-gray-900 to-gray-800 dark:from-indigo-900 dark:to-indigo-800 p-6 rounded-3xl shadow-lg text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-                    <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-indigo-500/20 rounded-full blur-2xl"></div>
-                    
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-3">
-                            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm">
-                                <CreditCard size={18} />
-                            </div>
-                            <span className="text-sm font-bold text-gray-300 uppercase tracking-wider">Daily Budget</span>
+                    <div className="bg-white dark:bg-zinc-900/50 p-5 rounded-[28px] border border-gray-100 dark:border-white/5">
+                        <div className="flex items-center gap-3 mb-4 text-gray-400">
+                            <MdLocationOn size={18} />
+                            <span className="text-[9px] font-black uppercase tracking-widest">Address</span>
                         </div>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-3xl font-black">₹</span>
-                            <span className="text-4xl font-black tracking-tight">
-                                {branch.current_budget ? Number(branch.current_budget).toLocaleString() : '---'}
-                            </span>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-2">
-                            {branch.current_budget 
-                                ? 'Daily spending limit for operational expenses' 
-                                : 'No budget limit configured for this branch'}
+                        <p className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed italic border-l-2 border-teal-500 pl-3">
+                            {branch.address_line_1}
+                            {branch.address_line_2 && <><br/>{branch.address_line_2}</>}
+                            <br/>{branch.city}, {branch.state} - {branch.pincode}
                         </p>
+                    </div>
+
+                    <div className="bg-white dark:bg-zinc-900/50 p-5 rounded-[28px] border border-gray-100 dark:border-white/5 flex items-center justify-between">
+                         <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-teal-50 dark:bg-teal-900/20 text-teal-600 flex items-center justify-center font-bold">
+                                {branch.admin_first_name[0]}
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-gray-900 dark:text-white leading-none">{branch.admin_first_name} {branch.admin_last_name}</p>
+                                <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1">Branch Admin</p>
+                            </div>
+                         </div>
                     </div>
                 </div>
 
             </main>
+
+            {/* Budget Popup */}
+            {isBudgetModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-black w-full sm:max-w-xs rounded-[32px] p-8 shadow-2xl animate-slide-up border border-gray-100 dark:border-white/5">
+                         <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white italic">Update Budget</h3>
+                            <button onClick={() => setIsBudgetModalOpen(false)} className="text-gray-400"><MdClose size={24}/></button>
+                         </div>
+                         <div className="mb-8">
+                            <input 
+                                className="w-full bg-gray-50 dark:bg-zinc-900 border-none rounded-2xl py-4 text-center text-3xl font-light italic text-gray-900 dark:text-white outline-none" 
+                                type="number" 
+                                value={newBudget} 
+                                onChange={e => setNewBudget(e.target.value)}
+                                autoFocus
+                            />
+                            <p className="text-[10px] text-center font-black text-gray-400 uppercase tracking-widest mt-2">Enter Amount (₹)</p>
+                         </div>
+                         <button 
+                            onClick={handleSaveBudget} 
+                            disabled={submitting}
+                            className="w-full h-14 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl disabled:opacity-30 active:scale-95 transition-all"
+                         >
+                            {submitting ? 'Saving...' : 'Confirm'}
+                         </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
