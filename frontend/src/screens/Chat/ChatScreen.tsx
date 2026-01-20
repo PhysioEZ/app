@@ -32,8 +32,8 @@ interface Message {
     is_sender: boolean;
 }
 
-const API_BASE_URL = 'https://prospine.in/admin/mobile/api';
-const FILE_BASE_URL = 'https://prospine.in/';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const FILE_BASE_URL = API_BASE_URL.split('/admin/')[0] + '/';
 
 const ChatScreen: React.FC = () => {
     const { user } = useAuthStore();
@@ -404,7 +404,7 @@ const ChatScreen: React.FC = () => {
                     >
                         {isUploading ? <MdRefresh size={24} className="animate-spin text-primary" /> : <MdAttachFile size={24} />}
                     </button>
-                    <div className="flex-1 bg-surface-variant/30 dark:bg-gray-800 rounded-[24px] flex items-center px-4 py-2 focus-within:ring-2 focus-within:ring-primary/30 transition-all border border-transparent focus-within:border-primary/20">
+                    <div className="flex-1 bg-surface-variant/30 dark:bg-gray-800 rounded-[24px] flex items-center px-4 py-2 transition-all border border-transparent">
                         <textarea 
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
@@ -415,7 +415,7 @@ const ChatScreen: React.FC = () => {
                                 }
                             }}
                             placeholder="Type a message..."
-                            className="bg-transparent border-none focus:ring-0 w-full text-sm max-h-32 resize-none py-2 text-on-surface dark:text-white placeholder-outline dark:placeholder-gray-500"
+                            className="bg-transparent border-none focus:ring-0 outline-none w-full text-sm max-h-32 resize-none py-2 text-on-surface dark:text-white placeholder-outline dark:placeholder-gray-500"
                             rows={1}
                             style={{ minHeight: '40px' }}
                         />

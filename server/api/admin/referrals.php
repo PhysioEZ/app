@@ -77,16 +77,16 @@ if ($method === 'GET') {
                     p.name, 
                     p.phone,
                     (
-                        (SELECT COUNT(*) FROM registration r WHERE r.referral_partner_id = p.partner_id AND r.branch_id = :bid) +
-                        (SELECT COUNT(DISTINCT t.test_id) FROM tests t JOIN test_items ti ON t.test_id = ti.test_id WHERE t.referral_partner_id = p.partner_id AND t.branch_id = :bid)
+                        (SELECT COUNT(*) FROM registration r WHERE r.referral_partner_id = p.partner_id AND r.branch_id = :bid AND MONTH(r.created_at) = MONTH(CURRENT_DATE()) AND YEAR(r.created_at) = YEAR(CURRENT_DATE())) +
+                        (SELECT COUNT(DISTINCT t.test_id) FROM tests t JOIN test_items ti ON t.test_id = ti.test_id WHERE t.referral_partner_id = p.partner_id AND t.branch_id = :bid AND MONTH(t.created_at) = MONTH(CURRENT_DATE()) AND YEAR(t.created_at) = YEAR(CURRENT_DATE()))
                     ) as total_patients,
                     (
-                        (SELECT COALESCE(SUM(consultation_amount),0) FROM registration r WHERE r.referral_partner_id = p.partner_id AND r.branch_id = :bid) +
-                        (SELECT COALESCE(SUM(total_amount),0) FROM tests t WHERE t.referral_partner_id = p.partner_id AND t.branch_id = :bid)
+                        (SELECT COALESCE(SUM(consultation_amount),0) FROM registration r WHERE r.referral_partner_id = p.partner_id AND r.branch_id = :bid AND MONTH(r.created_at) = MONTH(CURRENT_DATE()) AND YEAR(r.created_at) = YEAR(CURRENT_DATE())) +
+                        (SELECT COALESCE(SUM(total_amount),0) FROM tests t WHERE t.referral_partner_id = p.partner_id AND t.branch_id = :bid AND MONTH(t.created_at) = MONTH(CURRENT_DATE()) AND YEAR(t.created_at) = YEAR(CURRENT_DATE()))
                     ) as total_revenue,
                     (
-                         (SELECT COALESCE(SUM(commission_amount),0) FROM registration r WHERE r.referral_partner_id = p.partner_id AND r.commission_status = 'pending' AND r.branch_id = :bid) +
-                         (SELECT COALESCE(SUM(ti.commission_amount),0) FROM test_items ti JOIN tests t ON ti.test_id = t.test_id WHERE t.referral_partner_id = p.partner_id AND ti.commission_status = 'pending' AND t.branch_id = :bid)
+                         (SELECT COALESCE(SUM(commission_amount),0) FROM registration r WHERE r.referral_partner_id = p.partner_id AND r.commission_status = 'pending' AND r.branch_id = :bid AND MONTH(r.created_at) = MONTH(CURRENT_DATE()) AND YEAR(r.created_at) = YEAR(CURRENT_DATE())) +
+                         (SELECT COALESCE(SUM(ti.commission_amount),0) FROM test_items ti JOIN tests t ON ti.test_id = t.test_id WHERE t.referral_partner_id = p.partner_id AND ti.commission_status = 'pending' AND t.branch_id = :bid AND MONTH(t.created_at) = MONTH(CURRENT_DATE()) AND YEAR(t.created_at) = YEAR(CURRENT_DATE()))
                     ) as pending_commission
                 FROM referral_partners p
                 HAVING total_patients > 0
@@ -139,7 +139,8 @@ if ($method === 'GET') {
                     commission_amount as commission,
                     commission_status as status
                 FROM registration 
-                WHERE referral_partner_id = :pid1 AND branch_id = :bid1
+                WHERE referral_partner_id = :pid1 AND branch_id = :bid1 
+                  AND MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())
                 
                 UNION ALL
                 
@@ -155,6 +156,7 @@ if ($method === 'GET') {
                 FROM test_items ti
                 JOIN tests t ON ti.test_id = t.test_id
                 WHERE t.referral_partner_id = :pid2 AND t.branch_id = :bid2
+                  AND MONTH(t.created_at) = MONTH(CURRENT_DATE()) AND YEAR(t.created_at) = YEAR(CURRENT_DATE())
                 
                 ORDER BY date DESC
                 LIMIT 500

@@ -5,6 +5,7 @@ import {
     MdLightMode, MdDarkMode, MdNotifications, MdClose, MdAccountBalanceWallet,
     MdPersonAdd, MdScience, MdFeedback, MdNotificationsOff, MdAccessTime
 } from 'react-icons/md';
+import { Haptics, NotificationType } from '@capacitor/haptics';
 import { useTheme } from '../../hooks/useTheme';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://prospine.in/admin/mobile/api';
@@ -63,6 +64,76 @@ const DashboardScreen: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   
+  const lastToastedIdRef = React.useRef<number>(Number(localStorage.getItem('p_EZ_rec_last_notif_id')) || 0);
+
+    // Audio Context Management
+    const audioCtxRef = React.useRef<AudioContext | null>(null);
+    const audioUnlockedRef = React.useRef<boolean>(false);
+
+    useEffect(() => {
+        const unlockAudio = () => {
+            // Only create context on explicit user interaction
+            if (!audioCtxRef.current) {
+                audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            }
+
+            // Attempt to resume
+            if (audioCtxRef.current.state === 'suspended') {
+                audioCtxRef.current.resume().then(() => {
+                    audioUnlockedRef.current = true;
+                }).catch(e => console.error("Audio resume failed", e));
+            } else {
+                audioUnlockedRef.current = true;
+            }
+            
+            // Remove listeners once unlocked
+            if (audioCtxRef.current.state === 'running') {
+                window.removeEventListener('click', unlockAudio);
+                window.removeEventListener('touchstart', unlockAudio);
+                window.removeEventListener('keydown', unlockAudio);
+            }
+        };
+
+        window.addEventListener('click', unlockAudio);
+        window.addEventListener('touchstart', unlockAudio);
+        window.addEventListener('keydown', unlockAudio);
+
+        return () => {
+            window.removeEventListener('click', unlockAudio);
+            window.removeEventListener('touchstart', unlockAudio);
+            window.removeEventListener('keydown', unlockAudio);
+        };
+    }, []);
+
+    const playNotificationSound = () => {
+        if (!audioCtxRef.current || !audioUnlockedRef.current) return;
+        try {
+            const ctx = audioCtxRef.current;
+             // Double check state
+             if (ctx.state === 'suspended') {
+                ctx.resume().catch(() => {});
+                return;
+            }
+
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.1);
+            
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+            
+            osc.start();
+            osc.stop(ctx.currentTime + 0.5);
+        } catch (e) {
+            // Squelch audio errors
+        }
+    };
+  
   const fetchDashboard = async () => {
     try {
       const response = await fetch(`${API_URL}/dashboard.php`, {
@@ -94,6 +165,28 @@ const DashboardScreen: React.FC = () => {
           if (json.status === 'success') {
               setNotifications(json.data);
               setUnreadCount(json.unread_count);
+
+              // Check for new notifications to alert
+              const unreadNotifications = json.data.filter((n: Notification) => n.is_read === 0);
+              if (unreadNotifications.length > 0) {
+                  const newest = unreadNotifications[0];
+                  if (newest.notification_id > lastToastedIdRef.current) {
+                      // Play Sound if unlocked
+                      playNotificationSound();
+
+                      // Haptic Feedback (Only if unlocked/interacted)
+                      if (audioUnlockedRef.current) {
+                           // Simple safe vibrate check
+                           const canVibrate = typeof navigator !== 'undefined' && 'vibrate' in navigator;
+                           if (canVibrate) {
+                               Haptics.notification({ type: NotificationType.Success }).catch(() => {});
+                           }
+                      }
+                      
+                      lastToastedIdRef.current = newest.notification_id;
+                      localStorage.setItem('p_EZ_rec_last_notif_id', newest.notification_id.toString());
+                  }
+              }
           }
       } catch (e) {
           console.error("Failed to fetch notifications", e);

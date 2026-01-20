@@ -9,7 +9,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-require_once '../../common/db.php';
+// Database Access
+$dbPaths = [
+    __DIR__ . '/../../../common/db.php',
+    __DIR__ . '/../../common/db.php',
+    '/srv/http/admin/common/db.php'
+];
+
+$dbFound = false;
+foreach ($dbPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $dbFound = true;
+        break;
+    }
+}
+
+if (!$dbFound) {
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Database configuration not found']);
+    exit;
+}
 
 try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {

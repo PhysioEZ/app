@@ -69,23 +69,21 @@ $response = [
 ];
 
 try {
-    // --- 1. REGISTRATIONS ---
-    // All Time
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM registration WHERE 1=1 $whereBranch");
-    $stmt->execute(getParams($branch_id));
-    $regTotal = $stmt->fetchColumn() ?: 0;
-
-    // Today Total
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM registration WHERE DATE(created_at) = ? $whereBranch");
-    $stmt->execute(getParams($branch_id, [$today])); // Params order: branch first? No, query struct is "WHERE branch_id = ? AND date = ?"
-    // Wait, my $whereBranch is "AND branch_id = ?". So "WHERE 1=1 AND branch_id = ?" works.
-    // Query: "WHERE DATE(created_at) = ? AND branch_id = ?" (if I append) or "WHERE branch_id = ? AND DATE = ?"
-    // Let's be explicit:
-    
+    // Branch Filtering helper
     $branchClause = ($branch_id > 0) ? "branch_id = ?" : "1=1";
     $pBranch = ($branch_id > 0) ? [$branch_id] : [];
 
-    // Today
+    // Monthly Clause
+    $currentMonthlyClause = "AND created_at BETWEEN ? AND ?";
+    $monthlyParams = [$startOfMonth, $endOfMonth . ' 23:59:59'];
+
+    // --- 1. REGISTRATIONS ---
+    // Current Month Only
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM registration WHERE $branchClause $currentMonthlyClause");
+    $stmt->execute(array_merge($pBranch, $monthlyParams));
+    $regTotal = $stmt->fetchColumn() ?: 0;
+
+    // Today Total
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM registration WHERE $branchClause AND DATE(created_at) = ?");
     $stmt->execute(array_merge($pBranch, [$today]));
     $regToday = $stmt->fetchColumn() ?: 0;
@@ -98,7 +96,7 @@ try {
         $s = strtolower($row['status']);
         if($s == 'pending') $regWait += $row['c'];
         if($s == 'cancelled') $regCncl += $row['c'];
-        if(in_array($s, ['consulted','closed'])) $regDone += $row['c'];
+        if(in_array($s, ['consulted', 'closed'])) $regDone += $row['c'];
     }
 
     // Revenue Today (Reg)
@@ -106,16 +104,16 @@ try {
     $stmt->execute(array_merge($pBranch, [$today]));
     $regRevToday = (float)$stmt->fetchColumn();
 
-    // TOTAL REVENUE (Reg) All Time
-    $stmt = $pdo->prepare("SELECT COALESCE(SUM(consultation_amount), 0) FROM registration WHERE $branchClause");
-    $stmt->execute($pBranch);
+    // TOTAL REVENUE (Reg) Current Month
+    $stmt = $pdo->prepare("SELECT COALESCE(SUM(consultation_amount), 0) FROM registration WHERE $branchClause $currentMonthlyClause");
+    $stmt->execute(array_merge($pBranch, $monthlyParams));
     $regRevTotal = (float)$stmt->fetchColumn();
 
 
     // --- 2. PATIENTS ---
-    // All Time
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM patients WHERE $branchClause");
-    $stmt->execute($pBranch);
+    // Current Month
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM patients WHERE $branchClause $currentMonthlyClause");
+    $stmt->execute(array_merge($pBranch, $monthlyParams));
     $patTotal = $stmt->fetchColumn() ?: 0;
 
     // Today
@@ -139,16 +137,16 @@ try {
     $stmt->execute(array_merge($pBranch, [$today]));
     $patRevToday = (float)$stmt->fetchColumn();
 
-    // Total Revenue (Patients)
-    $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM payments p JOIN patients pt ON p.patient_id = pt.patient_id WHERE pt.$branchClause");
-    $stmt->execute($pBranch);
+    // Total Revenue (Patients) - Current Month
+    $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM payments p JOIN patients pt ON p.patient_id = pt.patient_id WHERE pt.$branchClause AND p.payment_date BETWEEN ? AND ?");
+    $stmt->execute(array_merge($pBranch, [$startOfMonth, $endOfMonth . ' 23:59:59']));
     $patRevTotal = (float)$stmt->fetchColumn();
 
 
     // --- 3. TESTS ---
-    // All Time
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM tests WHERE $branchClause");
-    $stmt->execute($pBranch);
+    // Current Month
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM tests WHERE $branchClause $currentMonthlyClause");
+    $stmt->execute(array_merge($pBranch, $monthlyParams));
     $testTotal = $stmt->fetchColumn() ?: 0;
 
     // Today
@@ -171,16 +169,16 @@ try {
     $stmt->execute(array_merge($pBranch, [$today]));
     $testRevToday = (float)$stmt->fetchColumn();
 
-    // Total Revenue (Tests)
-    $stmt = $pdo->prepare("SELECT COALESCE(SUM(advance_amount), 0) FROM tests WHERE $branchClause");
-    $stmt->execute($pBranch);
+    // Total Revenue (Tests) - Current Month
+    $stmt = $pdo->prepare("SELECT COALESCE(SUM(advance_amount), 0) FROM tests WHERE $branchClause $currentMonthlyClause");
+    $stmt->execute(array_merge($pBranch, $monthlyParams));
     $testRevTotal = (float)$stmt->fetchColumn();
 
 
     // --- 4. EXPENSES ---
-    // All Time
-    $stmt = $pdo->prepare("SELECT COUNT(*), COALESCE(SUM(amount), 0) FROM expenses WHERE $branchClause");
-    $stmt->execute($pBranch);
+    // Current Month Only
+    $stmt = $pdo->prepare("SELECT COUNT(*), COALESCE(SUM(amount), 0) FROM expenses WHERE $branchClause AND expense_date BETWEEN ? AND ?");
+    $stmt->execute(array_merge($pBranch, [$startOfMonth, $endOfMonth]));
     $expRes = $stmt->fetch(PDO::FETCH_NUM);
     $expCountTotal = $expRes[0];
     $expAmountTotal = (float)$expRes[1];
@@ -192,9 +190,9 @@ try {
 
 
     // --- 5. SESSIONS ---
-    // All Time
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM attendance a JOIN patients p ON a.patient_id = p.patient_id WHERE p.$branchClause");
-    $stmt->execute($pBranch);
+    // Current Month Only (This replaces the old all-time sessTotal)
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM attendance a JOIN patients p ON a.patient_id = p.patient_id WHERE p.$branchClause AND a.attendance_date BETWEEN ? AND ?");
+    $stmt->execute(array_merge($pBranch, [$startOfMonth, $endOfMonth]));
     $sessTotal = $stmt->fetchColumn() ?: 0;
 
     // Today
@@ -202,10 +200,8 @@ try {
     $stmt->execute(array_merge($pBranch, [$today]));
     $sessToday = $stmt->fetchColumn() ?: 0;
 
-    // This Month
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM attendance a JOIN patients p ON a.patient_id = p.patient_id WHERE p.$branchClause AND a.attendance_date BETWEEN ? AND ?");
-    $stmt->execute(array_merge($pBranch, [$startOfMonth, $endOfMonth]));
-    $sessMonth = $stmt->fetchColumn() ?: 0;
+    // This Month (Redundant now, but keeping for compatibility if ever split)
+    $sessMonth = $sessTotal;
 
 
     // --- TOTALS ---
@@ -338,6 +334,49 @@ try {
         // Table might not exist or column name mismatch, ignore for now to prevent crash
     }
 
+    // --- PENDING APPROVALS (Expenses & Attendance) ---
+    $approvals = [];
+    
+    // 1. Pending Expenses
+    $stmt = $pdo->prepare("
+        SELECT 'expense' as type, e.expense_id as id, e.amount, e.expense_for as category, e.paid_to, e.expense_date as date
+        FROM expenses e
+        WHERE e.$branchClause AND e.status = 'pending'
+        ORDER BY e.expense_date DESC
+    ");
+    $stmt->execute($pBranch);
+    while($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $approvals[] = [
+            'type' => 'expense',
+            'id' => $row['id'],
+            'title' => 'Pending Expense',
+            'details' => "₹" . number_format((float)$row['amount']) . " for " . $row['category'] . " to " . $row['paid_to'],
+            'date' => $row['date'],
+            'amount' => $row['amount']
+        ];
+    }
+    
+    // 2. Pending Attendance
+    $stmt = $pdo->prepare("
+        SELECT 'attendance' as type, a.attendance_id as id, r.patient_name, a.attendance_date as date
+        FROM attendance a
+        JOIN patients p ON a.patient_id = p.patient_id
+        JOIN registration r ON p.registration_id = r.registration_id
+        WHERE p.$branchClause AND a.status = 'pending'
+        ORDER BY a.attendance_date DESC
+    ");
+    $stmt->execute($pBranch);
+    while($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $approvals[] = [
+            'type' => 'attendance',
+            'id' => $row['id'],
+            'title' => 'Attendance Approval',
+            'details' => "Verify session for " . $row['patient_name'],
+            'date' => $row['date'],
+            'patient_name' => $row['patient_name']
+        ];
+    }
+
 
     $response['kpi'] = [
         'registrations' => [
@@ -386,6 +425,7 @@ try {
     ];
     
     $response['recent_activity'] = $recent_activity;
+    $response['approvals'] = $approvals;
 
 } catch (PDOException $e) {
     $response['status'] = 'error';

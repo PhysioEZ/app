@@ -1,4 +1,4 @@
-package com.caresyncos.app;
+package com.physioez.app;
 
 import com.getcapacitor.BridgeActivity;
 

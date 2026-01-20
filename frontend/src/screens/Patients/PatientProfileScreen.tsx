@@ -12,7 +12,6 @@ import {
     MdReceiptLong, 
     MdAccountBalanceWallet,
     MdCheckCircle,
-    MdAccessTime,
     MdWarning,
     MdPerson,
     MdClose,
@@ -165,15 +164,6 @@ const PatientProfileScreen = () => {
         </div>
     );
 
-    const InfoItem = ({ icon, label, value, className = '' }: any) => (
-        <div className={`p-3 bg-surface-variant/30 dark:bg-gray-800 rounded-xl ${className}`}>
-            <div className="flex items-center gap-2 mb-1.5">
-                <div className="text-outline dark:text-gray-500">{icon}</div>
-                <p className="text-[10px] font-bold text-outline dark:text-gray-500 uppercase">{label}</p>
-            </div>
-            <p className="text-sm font-bold text-on-surface dark:text-white break-words leading-tight pl-1">{value || 'N/A'}</p>
-        </div>
-    );
 
     const StatCard = ({ label, value, colorClass, icon }: any) => (
          <div className={`rounded-2xl p-4 border flex justify-between items-center ${colorClass}`}>

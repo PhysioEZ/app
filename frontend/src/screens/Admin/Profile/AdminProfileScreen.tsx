@@ -1,19 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { 
-    User, 
-    MapPin, 
-    Calendar, 
-    Mail, 
-    Shield, 
-    Building, 
-    Key, 
-    Edit2,
-    CheckCircle,
-    Moon,
-    Sun
-} from 'lucide-react';
+    MdEdit,
+    MdEmail,
+    MdLocationOn,
+    MdBadge,
+    MdPhone,
+    MdCalendarToday,
+    MdShield,
+    MdCheckCircle,
+    MdVpnKey,
+    MdBusiness,
+    MdLightMode,
+    MdDarkMode,
+    MdArrowBack,
+    MdClose,
+    MdLockOutline
+} from 'react-icons/md';
 import { useTheme } from '../../../hooks/useTheme';
+import { useNavigate } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://prospine.in/admin/mobile/api';
 const ADMIN_URL = 'https://prospine.in/admin';
@@ -45,37 +50,76 @@ interface Branch {
 const AdminProfileScreen: React.FC = () => {
     const { user } = useAuthStore();
     const { theme, toggleTheme } = useTheme();
+    const navigate = useNavigate();
     const [profile, setProfile] = useState<ProfileData | null>(null);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Password Modal State
+    const [showPassModal, setShowPassModal] = useState(false);
+    const [passData, setPassData] = useState({ old: '', new: '', confirm: '' });
+    const [passLoading, setPassLoading] = useState(false);
+    const [passError, setPassError] = useState('');
 
     const fetchData = async () => {
         if (!user) return;
         setLoading(true);
         try {
             const empId = (user as any).employee_id || user.id;
-
-            // 1. Fetch Profile
             const profileRes = await fetch(`${API_URL}/profile.php?employee_id=${empId}`);
             const profileJson = await profileRes.json();
             if (profileJson.status === 'success') {
                 setProfile(profileJson.data);
             }
 
-            // 2. Fetch Branches (if admin/superadmin)
-            // 2. Fetch Branches (if admin/superadmin)
             const branchRes = await fetch(`${API_URL}/admin/my_branches.php?employee_id=${empId}`);
             const branchJson = await branchRes.json();
             if (branchJson.status === 'success') {
                 setBranches(branchJson.data);
             }
-
-
-
         } catch (e) {
             console.error(e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handlePasswordChange = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPassError('');
+        
+        if (passData.new !== passData.confirm) {
+            setPassError('New passwords do not match');
+            return;
+        }
+        if (passData.new.length < 6) {
+            setPassError('Password must be at least 6 characters');
+            return;
+        }
+
+        setPassLoading(true);
+        try {
+            const res = await fetch(`${API_URL}/change_password.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    employee_id: (user as any).employee_id || user?.id,
+                    old_password: passData.old,
+                    new_password: passData.new
+                })
+            });
+            const json = await res.json();
+            if (json.status === 'success') {
+                alert('Password updated successfully');
+                setShowPassModal(false);
+                setPassData({ old: '', new: '', confirm: '' });
+            } else {
+                setPassError(json.message || 'Failed to update password');
+            }
+        } catch (err) {
+            setPassError('Connection error. Please try again.');
+        } finally {
+            setPassLoading(false);
         }
     };
 
@@ -85,8 +129,8 @@ const AdminProfileScreen: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-                <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+            <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] dark:bg-gray-950">
+                <div className="w-6 h-6 border-2 border-gray-100 border-t-primary rounded-full animate-spin"></div>
             </div>
         );
     }
@@ -94,169 +138,257 @@ const AdminProfileScreen: React.FC = () => {
     if (!profile) return null;
 
     return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors overflow-y-auto pb-10">
-            {/* Header */}
-            <div className="px-6 py-5 flex justify-between items-center bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-20">
-                <div>
-                   <h1 className="text-2xl font-black text-gray-900 dark:text-white">Profile Settings</h1>
-                   <p className="text-xs text-gray-500 dark:text-gray-400">Manage your personal information</p>
-                </div>
-            </div>
+        <div className="flex flex-col h-screen bg-[#f8fafc] dark:bg-gray-950 transition-colors duration-500 relative overflow-hidden font-sans">
+            
+            {/* Header Gradient Overlay */}
+            <div className="absolute top-0 left-0 right-0 h-[300px] bg-gradient-to-b from-[#E0F2F1] via-[#E0F2F1]/50 to-transparent dark:from-teal-900/10 dark:to-transparent pointer-events-none z-0" />
 
-            <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
+            {/* Sticky Header */}
+            <header className="px-6 py-6 pt-12 flex items-center justify-between z-30 relative">
+                <div className="flex items-center gap-4">
+                    <button 
+                        onClick={() => navigate(-1)}
+                        className="w-10 h-10 rounded-2xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-md flex items-center justify-center text-gray-500 border border-white dark:border-gray-800 active:scale-90 transition-transform shadow-sm"
+                    >
+                        <MdArrowBack size={20} />
+                    </button>
+                    <div>
+                        <h1 className="text-xl font-light text-gray-900 dark:text-white tracking-tight">Profile Info</h1>
+                    </div>
+                </div>
                 
-                {/* 1. Main Profile Banner Card */}
-                <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden">
-                    {/* Background decoration */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                <button 
+                    onClick={toggleTheme} 
+                    className="w-10 h-10 rounded-2xl bg-white/50 dark:bg-gray-900/50 backdrop-blur-md flex items-center justify-center text-gray-400 border border-white dark:border-gray-800 active:scale-90 transition-transform shadow-sm"
+                >
+                    {theme === 'dark' ? <MdLightMode size={18} /> : <MdDarkMode size={18} />}
+                </button>
+            </header>
 
-                    <div className="relative group shrink-0">
-                        <div className="w-24 h-24 md:w-28 md:h-28 rounded-full p-1 bg-gradient-to-tr from-indigo-500 to-purple-600">
-                             <div className="w-full h-full rounded-full bg-white dark:bg-gray-900 flex items-center justify-center overflow-hidden border-4 border-white dark:border-gray-900">
-                                {profile.photo_path ? (
-                                    <img src={`${ADMIN_URL}/${profile.photo_path}`} alt="Profile" className="w-full h-full object-cover" />
-                                ) : (
-                                    <span className="text-4xl font-bold text-gray-300 dark:text-gray-600">{profile.full_name?.charAt(0)}</span>
-                                )}
-                             </div>
+            <main className="flex-1 px-6 overflow-y-auto no-scrollbar pb-32 z-10 relative">
+                
+                {/* Profile Banner Section */}
+                <section className="mt-4 mb-8">
+                    <div className="bg-[#00796B] rounded-[40px] p-8 shadow-[0_12px_40px_rgba(0,121,107,0.15)] text-white relative overflow-hidden">
+                        <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] bg-white/5 rounded-full blur-[60px]" />
+                        
+                        <div className="relative z-10 flex flex-col items-center text-center gap-6">
+                            <div className="relative">
+                                <div className="w-24 h-24 rounded-[32px] p-1 bg-white/20 backdrop-blur-md shadow-xl">
+                                    <div className="w-full h-full rounded-[28px] bg-white overflow-hidden flex items-center justify-center">
+                                        {profile.photo_path ? (
+                                            <img src={`${ADMIN_URL}/${profile.photo_path}`} alt="Profile" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-4xl font-light text-teal-600 uppercase">{profile.full_name?.charAt(0)}</span>
+                                        )}
+                                    </div>
+                                </div>
+                                <button className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-teal-600 rounded-xl shadow-lg flex items-center justify-center border-4 border-teal-700">
+                                    <MdEdit size={14} />
+                                </button>
+                            </div>
+
+                            <div className="space-y-4 w-full">
+                                <div>
+                                    <h2 className="text-3xl font-light tracking-tight">{profile.full_name}</h2>
+                                    <div className="mt-2 inline-flex items-center px-4 py-1 bg-white/10 rounded-full border border-white/5">
+                                        <span className="text-[10px] font-medium uppercase tracking-[0.2em]">{profile.role}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-2 pt-2">
+                                    <div className="flex items-center justify-center gap-2 text-[11px] text-white/70 font-medium tracking-wide">
+                                        <MdEmail size={14} />
+                                        {profile.email}
+                                    </div>
+                                    <div className="flex items-center justify-center gap-2 text-[11px] text-white/70 font-medium tracking-wide">
+                                        <MdLocationOn size={14} />
+                                        {profile.city || 'Unknown Location'}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <button className="absolute bottom-0 right-0 p-2 bg-white dark:bg-gray-700 rounded-full shadow-lg border border-gray-100 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:text-indigo-600">
-                            <Edit2 size={14} />
-                        </button>
+                    </div>
+                </section>
+
+                {/* Information Sections */}
+                <div className="flex flex-col gap-6">
+                    
+                    {/* Basic Info Pill Card */}
+                    <div className="bg-white dark:bg-gray-900 rounded-[36px] p-8 border border-gray-100 dark:border-gray-800 shadow-sm space-y-8">
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-400 flex items-center justify-center">
+                                <MdBadge size={18} />
+                            </div>
+                            <h3 className="text-base font-light text-gray-900 dark:text-white tracking-tight">Professional Details</h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6">
+                            <InfoRow label="Employee ID" value={profile.employee_id} icon={<MdBadge size={14} />} />
+                            <InfoRow label="Phone Contact" value={profile.phone_number} icon={<MdPhone size={14} />} />
+                            <InfoRow label="Resident Address" value={profile.address} icon={<MdLocationOn size={14} />} />
+                            <InfoRow label="Joined Date" value={profile.date_of_joining} icon={<MdCalendarToday size={14} />} />
+                        </div>
                     </div>
 
-                    <div className="text-center md:text-left flex-1 min-w-0 z-10">
-                        <span className="inline-block px-2.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-wider mb-2">
-                            {profile.role}
-                        </span>
-                        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-1">{profile.full_name}</h2>
-                        <div className="flex flex-col md:flex-row items-center md:items-start gap-2 md:gap-4 text-sm text-gray-500 dark:text-gray-400 font-medium">
-                            <span className="flex items-center gap-1.5">
-                                <Mail size={14} /> {profile.email}
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <MapPin size={14} /> {profile.city || 'Unknown Location'}
-                            </span>
+                    {/* Managed Branches Section */}
+                    <div className="bg-white dark:bg-gray-900 rounded-[36px] p-8 border border-gray-100 dark:border-gray-800 shadow-sm space-y-8">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-900/20 text-teal-500 flex items-center justify-center">
+                                    <MdBusiness size={18} />
+                                </div>
+                                <h3 className="text-base font-light text-gray-900 dark:text-white tracking-tight">Operations</h3>
+                            </div>
+                            <span className="text-[10px] font-medium text-gray-400 tracking-widest uppercase">{branches.length} Assigned</span>
+                        </div>
+
+                        <div className="flex flex-col gap-3">
+                            {branches.length > 0 ? branches.map(branch => (
+                                <div key={branch.branch_id} className="p-5 rounded-[24px] border border-gray-50 dark:border-gray-800 bg-[#f8fafc] dark:bg-gray-950/50 flex items-center justify-between group transition-all active:scale-[0.98]">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-2xl bg-white dark:bg-gray-800 flex items-center justify-center text-teal-500 shadow-sm border border-gray-100/50 dark:border-gray-700">
+                                            <MdBusiness size={18} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200">{branch.branch_name}</h4>
+                                            <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">Primary Center</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-[10px] font-medium text-gray-400">#{branch.branch_id}</div>
+                                </div>
+                            )) : (
+                                <p className="text-xs text-center text-gray-400 py-4 font-light">No branches assigned to your account</p>
+                            )}
                         </div>
                     </div>
-                </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* LEFT COLUMN */}
-                    <div className="lg:col-span-1 space-y-6">
-                        {/* Personal Info */}
-                        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-2 mb-6">
-                                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg">
-                                    <User size={18} />
-                                </div>
-                                <h3 className="font-bold text-gray-900 dark:text-white">Personal Info</h3>
+                    {/* Security Pill Card */}
+                    <div className="bg-white dark:bg-gray-900 rounded-[36px] p-8 border border-gray-100 dark:border-gray-800 shadow-sm space-y-8">
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-rose-400 flex items-center justify-center">
+                                <MdShield size={18} />
                             </div>
-                            
-                            <div className="space-y-5">
-                                <InfoField label="Employee ID" value={profile.employee_id} />
-                                <InfoField label="Phone" value={profile.phone_number} />
-                                <InfoField label="Address" value={profile.address} />
-                                <InfoField label="Joined Date" value={profile.date_of_joining} icon={<Calendar size={14} />} />
-                            </div>
+                            <h3 className="text-base font-light text-gray-900 dark:text-white tracking-tight">Security & Privacy</h3>
                         </div>
 
-                        {/* Security */}
-                        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-2 mb-6">
-                                <div className="p-2 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg">
-                                    <Shield size={18} />
+                        <div className="flex flex-col gap-4">
+                            <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-[20px] border border-emerald-100/50 dark:border-emerald-900/20 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <MdCheckCircle size={18} className="text-emerald-500" />
+                                    <span className="text-[11px] font-medium text-emerald-600">Account Verified</span>
                                 </div>
-                                <h3 className="font-bold text-gray-900 dark:text-white">Security</h3>
+                                <span className="text-[10px] font-medium text-emerald-500 uppercase tracking-widest px-2 py-0.5 bg-white dark:bg-emerald-900/30 rounded-full shadow-sm">Active</span>
                             </div>
 
-                            <div className="p-3 bg-gray-50 dark:bg-gray-700/30 rounded-xl flex items-center justify-between mb-4">
-                                <span className="text-xs font-bold text-gray-500">Account Status</span>
-                                <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded text-[10px] font-bold uppercase flex items-center gap-1">
-                                    <CheckCircle size={10} /> Active
-                                </span>
-                            </div>
-
-                            <button className="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm transition-all group">
-                                <div className="text-left">
-                                    <h4 className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 transition-colors">Change Password</h4>
-                                    <p className="text-[10px] text-gray-400">Update your login credentials</p>
+                            <button 
+                                onClick={() => setShowPassModal(true)}
+                                className="w-full flex items-center justify-between p-5 rounded-[24px] border border-gray-100 dark:border-gray-800 bg-[#f8fafc] dark:bg-gray-950/50 group active:scale-[0.98] transition-all"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-gray-800 flex items-center justify-center text-rose-400 shadow-sm border border-gray-100/50 dark:border-gray-700">
+                                        <MdVpnKey size={18} />
+                                    </div>
+                                    <div className="text-left">
+                                        <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200">Reset Credentials</h4>
+                                        <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">Last changed 2mo ago</p>
+                                    </div>
                                 </div>
-                                <Key size={16} className="text-gray-400 group-hover:text-indigo-600" />
+                                <MdArrowBack className="text-gray-300 rotate-180" size={18} />
                             </button>
                         </div>
                     </div>
+                </div>
 
-                    {/* RIGHT COLUMN */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Managed Branches */}
-                        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-2 mb-6">
-                                <div className="p-2 bg-teal-50 dark:bg-teal-900/20 text-teal-600 rounded-lg">
-                                    <Building size={18} />
-                                </div>
-                                <h3 className="font-bold text-gray-900 dark:text-white">Managed Branches</h3>
-                            </div>
+                <div className="py-10 text-center">
+                    <p className="text-[10px] font-medium text-gray-300 uppercase tracking-[0.4em]">Physio EZ • v3.0.0</p>
+                </div>
+            </main>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {branches.length > 0 ? branches.map(branch => (
-                                    <div key={branch.branch_id} className="p-4 rounded-2xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex flex-col justify-between h-32 hover:border-teal-200 transition-colors cursor-default">
-                                        <div className="flex justify-between items-start">
-                                            <div className="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm text-teal-600">
-                                                <Building size={20} />
-                                            </div>
-                                            <span className="text-[10px] font-bold bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
-                                                ID: {branch.branch_id}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-gray-900 dark:text-white mb-0.5">{branch.branch_name}</h4>
-                                            <p className="text-xs text-gray-500">Active Center</p>
-                                        </div>
+            {/* Password Reset Modal */}
+            {showPassModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => !passLoading && setShowPassModal(false)} />
+                    
+                    <div className="relative w-full max-w-sm bg-white dark:bg-gray-900 rounded-[40px] shadow-2xl animate-scale-in border border-gray-100 dark:border-gray-800 overflow-hidden">
+                        <div className="p-8 pb-4 flex items-center justify-between">
+                            <h3 className="text-xl font-light text-gray-900 dark:text-white tracking-tight">Change Password</h3>
+                            <button onClick={() => setShowPassModal(false)} className="w-10 h-10 flex items-center justify-center text-gray-300 hover:text-gray-900 transition-colors"><MdClose size={24} /></button>
+                        </div>
+
+                        <form onSubmit={handlePasswordChange} className="p-8 pt-4 space-y-6">
+                            {passError && <p className="text-[11px] text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-2xl border border-red-100 dark:border-red-900/30 font-medium text-center">{passError}</p>}
+                            
+                            <div className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-2">Current Password</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="password"
+                                            required
+                                            value={passData.old}
+                                            onChange={e => setPassData({...passData, old: e.target.value})}
+                                            className="w-full h-14 bg-gray-50 dark:bg-gray-800 rounded-2xl px-12 text-sm focus:ring-2 focus:ring-teal-500/20 border-none outline-none transition-all dark:text-white"
+                                            placeholder="••••••••"
+                                        />
+                                        <MdLockOutline className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                                     </div>
-                                )) : (
-                                    <div className="col-span-2 text-center py-8 text-gray-400 text-sm">No branches assigned</div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* App Settings / Theme */}
-                        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-2 mb-6">
-                                <div className="p-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 rounded-lg">
-                                    {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
                                 </div>
-                                <h3 className="font-bold text-gray-900 dark:text-white">App Appearance</h3>
-                            </div>
 
-                            <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                                <div>
-                                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">Dark Mode</h4>
-                                    <p className="text-[10px] text-gray-500 font-medium italic">Reduce eye strain in low light</p>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-2">New Password</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="password"
+                                            required
+                                            value={passData.new}
+                                            onChange={e => setPassData({...passData, new: e.target.value})}
+                                            className="w-full h-14 bg-gray-50 dark:bg-gray-800 rounded-2xl px-12 text-sm focus:ring-2 focus:ring-teal-500/20 border-none outline-none transition-all dark:text-white"
+                                            placeholder="••••••••"
+                                        />
+                                        <MdLockOutline className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                    </div>
                                 </div>
-                                <button 
-                                    onClick={toggleTheme}
-                                    className={`relative w-14 h-8 rounded-full transition-colors duration-300 focus:outline-none ${theme === 'dark' ? 'bg-indigo-600' : 'bg-gray-300'}`}
-                                >
-                                    <div className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${theme === 'dark' ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                                </button>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-2">Confirm Password</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="password"
+                                            required
+                                            value={passData.confirm}
+                                            onChange={e => setPassData({...passData, confirm: e.target.value})}
+                                            className="w-full h-14 bg-gray-50 dark:bg-gray-800 rounded-2xl px-12 text-sm focus:ring-2 focus:ring-teal-500/20 border-none outline-none transition-all dark:text-white"
+                                            placeholder="••••••••"
+                                        />
+                                        <MdLockOutline className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                    </div>
+                                </div>
                             </div>
-                        </div>
 
-
+                            <button 
+                                type="submit"
+                                disabled={passLoading}
+                                className="w-full h-14 bg-[#00796B] text-white rounded-[24px] text-sm font-medium uppercase tracking-[0.2em] shadow-lg shadow-teal-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center"
+                            >
+                                {passLoading ? (
+                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : 'Update Security'}
+                            </button>
+                        </form>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };
 
-const InfoField = ({ label, value, icon }: { label: string, value: string, icon?: React.ReactNode }) => (
-    <div>
-        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">{label}</label>
-        <div className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            {icon && <span className="text-gray-400">{icon}</span>}
-            {value || 'N/A'}
+const InfoRow = ({ label, value, icon }: { label: string, value: string, icon: React.ReactNode }) => (
+    <div className="flex flex-col gap-2">
+        <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest opacity-80">{label}</label>
+        <div className="flex items-center gap-3">
+            <div className="text-gray-300 dark:text-gray-600">{icon}</div>
+            <span className="text-sm font-light text-gray-800 dark:text-white leading-tight">{value || 'Not Disclosed'}</span>
         </div>
     </div>
 );

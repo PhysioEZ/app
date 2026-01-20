@@ -1,11 +1,11 @@
 [package]
-name = "caresyncos"
-version = "2.5.0"
-description = "CareSyncOS Mobile Application"
+name = "physioez"
+version = "3.0.0"
+description = "PhysioEZ Mobile Application"
 authors = ["Sumit Srivastava"]
 license = ""
 repository = ""
-default-run = "caresyncos"
+default-run = "physioez"
 edition = "2021"
 rust-version = "1.60"
 

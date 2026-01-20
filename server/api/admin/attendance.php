@@ -117,6 +117,11 @@ if ($method === 'GET') {
                     a.remarks,
                     a.approval_request_at,
                     p.patient_id,
+                    p.advance_payment,
+                    p.treatment_cost_per_day,
+                    p.treatment_type,
+                    p.package_cost,
+                    p.treatment_days,
                     r.patient_name,
                     b.branch_name,
                     pm.patient_uid

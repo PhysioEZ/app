@@ -1,11 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { 
-    Bug, Search, Filter, MessageSquare, CheckCircle2, Clock, 
-    AlertCircle, X, Send 
-} from 'lucide-react';
+    MdSearch, MdFilterList, MdMessage, MdCheckCircle, 
+    MdPendingActions, MdError, MdClose, MdChevronLeft, MdSend, MdAdd,
+    MdPerson, MdBusiness
+} from 'react-icons/md';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://prospine.in/admin/mobile/api';
+
+const ADMIN_URL = 'https://prospine.in/admin';
 
 interface Issue {
     issue_id: number;
@@ -17,10 +21,12 @@ interface Issue {
     admin_response?: string;
     branch_name: string;
     reported_by_name: string;
+    attachments?: string[];
 }
 
 const IssueManagementScreen: React.FC = () => {
     const { user } = useAuthStore();
+    const navigate = useNavigate();
     const [issues, setIssues] = useState<Issue[]>([]);
     const [loading, setLoading] = useState(true);
     const [isDeveloper, setIsDeveloper] = useState(false);
@@ -35,6 +41,7 @@ const IssueManagementScreen: React.FC = () => {
     
     // Form States
     const [reportDescription, setReportDescription] = useState('');
+    const [selectedImages, setSelectedImages] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Edit States (Developer)
@@ -42,14 +49,11 @@ const IssueManagementScreen: React.FC = () => {
     const [editResponse, setEditResponse] = useState<string>('');
     const [editSchedule, setEditSchedule] = useState<string>('');
 
-    useEffect(() => {
-        if (user) fetchIssues();
-    }, [user, statusFilter]); // Rely on client-side search filtering usually, or debounced effect
-
-    const fetchIssues = async () => {
+    const fetchIssues = useCallback(async () => {
+        if (!user) return;
         try {
             setLoading(true);
-            const empId = (user as any).employee_id || user?.id;
+            const empId = user.employee_id || user.id;
             let url = `${API_URL}/admin/issues.php?action=fetch_issues&user_id=${empId}`;
             if (statusFilter !== 'all') url += `&status=${statusFilter}`;
             if (search) url += `&search=${encodeURIComponent(search)}`;
@@ -66,29 +70,37 @@ const IssueManagementScreen: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user, statusFilter, search]);
 
-    const handleReportIssue = async () => {
+    useEffect(() => {
+        fetchIssues();
+    }, [fetchIssues]);
+
+    const handleReportIssue = async (e: React.FormEvent) => {
+        e.preventDefault();
         if (!reportDescription.trim()) return;
         setIsSubmitting(true);
         try {
-            const empId = (user as any).employee_id || user?.id;
+            const empId = user?.employee_id || user?.id;
+            const formData = new FormData();
+            formData.append('action', 'report_issue');
+            formData.append('user_id', String(empId));
+            formData.append('description', reportDescription);
+            
+            selectedImages.forEach(img => {
+                formData.append('images[]', img);
+            });
+
             const res = await fetch(`${API_URL}/admin/issues.php`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'report_issue',
-                    user_id: empId,
-                    description: reportDescription
-                })
+                body: formData
             });
             const json = await res.json();
             if (json.status === 'success') {
                 setShowReportModal(false);
                 setReportDescription('');
-                fetchIssues(); // Refresh
-            } else {
-                alert(json.message);
+                setSelectedImages([]);
+                fetchIssues();
             }
         } catch (e) {
             console.error(e);
@@ -97,16 +109,24 @@ const IssueManagementScreen: React.FC = () => {
         }
     };
 
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            setSelectedImages(Array.from(e.target.files));
+        }
+    };
+
     const handleUpdateIssue = async () => {
-        if (!selectedIssue) return;
+        if (!selectedIssue || !user) return;
         setIsSubmitting(true);
         try {
+            const empId = user.employee_id || user.id;
             const res = await fetch(`${API_URL}/admin/issues.php`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'update_issue',
                     issue_id: selectedIssue.issue_id,
+                    user_id: empId,
                     status: editStatus,
                     admin_response: editResponse,
                     release_schedule: editSchedule
@@ -116,8 +136,6 @@ const IssueManagementScreen: React.FC = () => {
             if (json.status === 'success') {
                 setSelectedIssue(null);
                 fetchIssues();
-            } else {
-                alert(json.message);
             }
         } catch (e) {
             console.error(e);
@@ -133,226 +151,233 @@ const IssueManagementScreen: React.FC = () => {
         setEditSchedule(issue.release_schedule || 'next_release');
     };
 
-    const getStatusColor = (status: string) => {
+    const getStatusStyle = (status: string) => {
         switch (status) {
-            case 'completed': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800';
-            case 'in_progress': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800';
-            default: return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800';
-        }
-    };
-
-    const getStatusIcon = (status: string) => {
-        switch (status) {
-            case 'completed': return <CheckCircle2 size={14} />;
-            case 'in_progress': return <Clock size={14} />;
-            default: return <AlertCircle size={14} />;
+            case 'completed': return { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', icon: <MdCheckCircle /> };
+            case 'in_progress': return { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400', icon: <MdPendingActions /> };
+            default: return { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-600 dark:text-rose-400', icon: <MdError /> };
         }
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-[#0f172a] transition-colors duration-200 font-sans">
+        <div className="flex flex-col h-screen bg-[#f8fafc] dark:bg-black transition-colors duration-200 relative overflow-hidden font-sans">
             
+            {/* Branded Header Gradient */}
+            <div className="absolute top-0 left-0 right-0 h-[300px] bg-gradient-to-b from-[#fff1f2] via-[#fff1f2]/50 to-transparent dark:from-rose-900/10 dark:to-transparent pointer-events-none z-0" />
+
             {/* Header */}
-            <header className="px-6 py-4 pt-10 sticky top-0 z-30 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center justify-between mb-4">
-                    <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">System Support</p>
-                        <h1 className="text-xl font-black text-gray-900 dark:text-white">Issue Tracker</h1>
-                    </div>
-                    {!isDeveloper && (
+            <header className="px-6 py-6 pt-12 flex flex-col gap-6 z-40 relative">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
                         <button 
-                            onClick={() => setShowReportModal(true)}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white p-2.5 rounded-xl shadow-lg shadow-indigo-500/30 transition-all active:scale-95"
+                            onClick={() => navigate('/admin/menu')} 
+                            className="w-10 h-10 rounded-full bg-white dark:bg-zinc-900/50 shadow-sm border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 active:scale-90 transition-all"
                         >
-                            <Bug size={20} />
+                            <MdChevronLeft size={24} />
                         </button>
-                    )}
+                        <div>
+                            <h1 className="text-2xl font-light text-gray-900 dark:text-white tracking-tight leading-none">Issue Tracker</h1>
+                            <p className="text-[10px] font-medium text-rose-500 uppercase tracking-[0.2em] mt-2">Support & Feedback</p>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Search & Filter */}
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                     <div className="relative flex-1">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <MdSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                         <input 
-                            className="w-full bg-gray-50 dark:bg-gray-800/50 rounded-xl py-3 pl-11 pr-4 text-sm font-semibold text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:border-indigo-500 outline-none"
-                            placeholder="Search issues..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            onBlur={fetchIssues}
+                            className="w-full bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border border-gray-100 dark:border-white/5 rounded-2xl py-3 pl-11 pr-4 text-[10px] font-bold uppercase tracking-widest text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500/10 transition-all placeholder:text-gray-300"
+                            placeholder="Find issue..."
+                            value={search} 
+                            onChange={e => setSearch(e.target.value)}
                         />
                     </div>
-                    <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shrink-0">
-                         {/* Simple status toggle for mobile real estate */}
-                         <button 
-                            onClick={() => setStatusFilter(prev => prev === 'all' ? 'pending' : prev === 'pending' ? 'completed' : 'all')}
-                            className="px-3 py-2 rounded-lg text-xs font-bold uppercase transition-all bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 shadow-sm flex items-center gap-2"
-                         >
-                            <Filter size={14} />
-                            {statusFilter === 'all' ? 'All' : statusFilter}
-                         </button>
-                    </div>
+                    <button 
+                        onClick={() => setStatusFilter(prev => prev === 'all' ? 'pending' : prev === 'pending' ? 'in_progress' : prev === 'in_progress' ? 'completed' : 'all')}
+                        className="w-12 h-12 rounded-2xl bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 active:scale-90 transition-all relative"
+                    >
+                        <MdFilterList size={20} />
+                        {statusFilter !== 'all' && <div className="absolute top-3 right-3 w-1.5 h-1.5 bg-rose-500 rounded-full" />}
+                    </button>
                 </div>
             </header>
 
-            {/* Content */}
-            <main className="flex-1 p-6 space-y-4 pb-24 overflow-y-auto">
+            <main className="flex-1 overflow-y-auto no-scrollbar p-5 pb-32 space-y-4 relative z-10">
                 {loading ? (
-                    <div className="py-20 flex justify-center">
-                        <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-                    </div>
+                    <div className="py-20 text-center opacity-40 italic text-[10px] font-black uppercase tracking-widest">Scanning system...</div>
                 ) : issues.length === 0 ? (
-                    <div className="py-20 text-center text-gray-400 font-medium">No issues found</div>
+                    <div className="py-20 text-center opacity-40 italic text-[10px] font-black uppercase tracking-widest">No reports found</div>
                 ) : (
-                    issues.map(issue => (
-                        <div 
-                            key={issue.issue_id}
-                            onClick={() => isDeveloper ? openEditModal(issue) : setSelectedIssue(issue)}
-                            className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 active:scale-[0.99] transition-transform cursor-pointer"
-                        >
-                            <div className="flex justify-between items-start mb-3">
-                                <div className={`px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${getStatusColor(issue.status)}`}>
-                                    {getStatusIcon(issue.status)}
-                                    {issue.status.replace('_', ' ')}
+                    issues.map(issue => {
+                        const style = getStatusStyle(issue.status);
+                        return (
+                            <div 
+                                key={issue.issue_id}
+                                onClick={() => isDeveloper ? openEditModal(issue) : setSelectedIssue(issue)}
+                                className="bg-white dark:bg-zinc-900/50 p-6 rounded-[32px] border border-white dark:border-white/5 shadow-sm active:scale-[0.98] transition-all cursor-pointer"
+                            >
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 text-[9px] font-black uppercase tracking-widest ${style.bg} ${style.text} border-current/10`}>
+                                        {style.icon}
+                                        {issue.status.replace('_', ' ')}
+                                    </div>
+                                    <span className="text-[10px] font-bold text-gray-300">#{issue.issue_id}</span>
                                 </div>
-                                <span className="text-[10px] font-bold text-gray-400">#{issue.issue_id}</span>
-                            </div>
-                            
-                            <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-2 line-clamp-2 leading-snug">
-                                {issue.description}
-                            </h3>
+                                
+                                <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4 leading-relaxed uppercase">
+                                    {issue.description}
+                                </h3>
 
-                            {issue.admin_response && (
-                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-2.5 rounded-xl mb-3 flex gap-2">
-                                    <MessageSquare size={14} className="text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                                    <p className="text-xs text-indigo-800 dark:text-indigo-300 font-medium leading-relaxed">
-                                        <span className="font-bold opacity-70 block text-[10px] uppercase mb-0.5">Dev Response</span>
-                                        {issue.admin_response}
-                                    </p>
-                                </div>
-                            )}
+                                {issue.attachments && issue.attachments.length > 0 && (
+                                    <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar py-1">
+                                        {issue.attachments.map((path, i) => (
+                                            <div key={i} className="shrink-0 w-24 h-24 rounded-2xl overflow-hidden border border-gray-100 dark:border-white/10 bg-gray-50">
+                                                <img 
+                                                    src={`${ADMIN_URL}/${path}`} 
+                                                    alt="Bug" 
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
 
-                            <div className="flex items-center justify-between pt-2 border-t border-gray-50 dark:border-gray-700/50">
-                                <div className="flex items-center gap-2">
-                                     <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-500">
-                                         {issue.reported_by_name.charAt(0)}
-                                     </div>
-                                     <span className="text-[10px] font-bold text-gray-400 uppercase">{issue.reported_by_name}</span>
+                                {issue.admin_response && (
+                                    <div className="bg-rose-500/5 dark:bg-rose-500/10 p-4 rounded-2xl border border-rose-500/10 mb-4 flex gap-3">
+                                        <div className="shrink-0 pt-1 text-rose-500">
+                                            <MdMessage size={16} />
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] font-black text-rose-500 uppercase tracking-widest mb-1">Resolution</p>
+                                            <p className="text-[11px] font-medium text-gray-700 dark:text-zinc-300 leading-relaxed italic">{issue.admin_response}</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex items-center justify-between pt-4 border-t border-gray-50 dark:border-white/5">
+                                    <div className="flex gap-4">
+                                        <div className="flex items-center gap-1.5 opacity-50">
+                                            <MdPerson size={12} className="text-rose-500" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">{issue.reported_by_name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 opacity-50">
+                                            <MdBusiness size={12} className="text-gray-400" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">{issue.branch_name}</span>
+                                        </div>
+                                    </div>
+                                    <span className="text-[9px] font-black text-gray-300 tracking-widest">{new Date(issue.created_at).toLocaleDateString()}</span>
                                 </div>
-                                <span className="text-[10px] font-bold text-gray-400">{new Date(issue.created_at).toLocaleDateString()}</span>
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </main>
 
-            {/* Developer Edit Modal */}
-            {selectedIssue && isDeveloper && (
-                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-6">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedIssue(null)}></div>
-                    <div className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-300">
-                        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
-                            <h3 className="font-black text-gray-900 dark:text-white text-lg">Manage Issue #{selectedIssue.issue_id}</h3>
-                            <button onClick={() => setSelectedIssue(null)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                                <X size={20} className="text-gray-500" />
-                            </button>
-                        </div>
-                        
-                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                            <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
-                                <p className="text-xs uppercase font-bold text-gray-400 mb-1">Reported Issue</p>
-                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-relaxed">{selectedIssue.description}</p>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase mb-1.5 block">Status</label>
-                                    <select 
-                                        value={editStatus}
-                                        onChange={(e) => setEditStatus(e.target.value)}
-                                        className="w-full bg-gray-50 dark:bg-gray-700 rounded-xl p-3 text-sm font-bold text-gray-900 dark:text-white border-none outline-none focus:ring-2 focus:ring-indigo-500"
-                                    >
-                                        <option value="pending">Pending</option>
-                                        <option value="in_progress">In Progress</option>
-                                        <option value="completed">Completed</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase mb-1.5 block">Schedule</label>
-                                    <select 
-                                        value={editSchedule}
-                                        onChange={(e) => setEditSchedule(e.target.value)}
-                                        className="w-full bg-gray-50 dark:bg-gray-700 rounded-xl p-3 text-sm font-bold text-gray-900 dark:text-white border-none outline-none focus:ring-2 focus:ring-indigo-500"
-                                    >
-                                        <option value="immediate">Immediate</option>
-                                        <option value="nightly">Nightly Build</option>
-                                        <option value="next_release">Next Release</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 uppercase mb-1.5 block">Dev Response</label>
-                                <textarea 
-                                    rows={4}
-                                    value={editResponse}
-                                    onChange={(e) => setEditResponse(e.target.value)}
-                                    placeholder="Explain the fix or request info..."
-                                    className="w-full bg-gray-50 dark:bg-gray-700 rounded-xl p-3 text-sm font-medium text-gray-900 dark:text-white border-none outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700">
-                            <button 
-                                onClick={handleUpdateIssue}
-                                disabled={isSubmitting}
-                                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
-                            >
-                                {isSubmitting ? 'Saving...' : 'Update Issue'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            {/* FAB Button */}
+            {!isDeveloper && (
+                <button 
+                    onClick={() => setShowReportModal(true)}
+                    className="fixed bottom-24 right-6 w-14 h-14 rounded-[24px] bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-2xl flex items-center justify-center active:scale-95 transition-all z-50 animate-in fade-in slide-in-from-bottom-6 duration-500"
+                >
+                    <MdAdd size={32} />
+                </button>
             )}
 
-            {/* Admin View Details Modal (Read Only) */}
-            {selectedIssue && !isDeveloper && (
-                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-6">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedIssue(null)}></div>
-                    <div className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-300">
-                        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                            <h3 className="font-black text-gray-900 dark:text-white text-lg">Issue Details</h3>
-                            <button onClick={() => setSelectedIssue(null)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                                <X size={20} className="text-gray-500" />
-                            </button>
-                        </div>
-                        <div className="p-6 space-y-4">
+            {/* Developer/Action Modal */}
+            {selectedIssue && (
+                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-black w-full sm:max-w-md rounded-[48px] shadow-2xl overflow-hidden animate-slide-up border border-white dark:border-white/5 flex flex-col">
+                        <header className="p-10 flex justify-between items-center shrink-0">
                             <div>
-                                <h4 className="text-xs font-bold text-gray-400 uppercase mb-1">Description</h4>
-                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{selectedIssue.description}</p>
+                                <h3 className="text-2xl font-light italic text-gray-900 dark:text-white">
+                                    {isDeveloper ? 'Manage Issue' : 'Review Report'}
+                                </h3>
+                                <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mt-2 px-2 py-1 bg-rose-500/10 rounded inline-block">
+                                    REF #{selectedIssue.issue_id}
+                                </p>
                             </div>
-                            <div className="flex gap-4">
-                                <div>
-                                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-1">Status</h4>
-                                    <span className={`inline-block px-2 py-1 rounded text-xs font-bold uppercase ${getStatusColor(selectedIssue.status)}`}>
-                                        {selectedIssue.status.replace('_', ' ')}
-                                    </span>
-                                </div>
-                                {selectedIssue.release_schedule && (
-                                    <div>
-                                        <h4 className="text-xs font-bold text-gray-400 uppercase mb-1">Target Release</h4>
-                                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300 capitalize">
-                                            {selectedIssue.release_schedule.replace('_', ' ')}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                            {selectedIssue.admin_response && (
-                                <div className="bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-xl">
-                                    <h4 className="text-xs font-bold text-indigo-500 uppercase mb-1">Developer Response</h4>
-                                    <p className="text-xs font-medium text-indigo-800 dark:text-indigo-300">{selectedIssue.admin_response}</p>
-                                </div>
-                            )}
+                            <button onClick={() => setSelectedIssue(null)} className="w-12 h-12 rounded-full bg-gray-50 dark:bg-zinc-900 text-gray-400 flex items-center justify-center active:scale-90 transition-all">
+                                <MdClose size={24}/>
+                            </button>
+                        </header>
+                        
+                        <div className="flex-1 overflow-y-auto px-10 pb-10 no-scrollbar space-y-8">
+                            <div className="space-y-3">
+                                <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Description</label>
+                                <div className="p-6 bg-gray-50 dark:bg-zinc-900/50 rounded-3xl border border-gray-100 dark:border-white/5 italic text-sm text-gray-700 dark:text-zinc-300 leading-relaxed uppercase">
+                                     {selectedIssue.description}
+                                 </div>
+                             </div>
+
+                             {selectedIssue.attachments && selectedIssue.attachments.length > 0 && (
+                                 <div className="space-y-3">
+                                     <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Evidence</label>
+                                     <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+                                         {selectedIssue.attachments.map((path, i) => (
+                                             <div key={i} className="shrink-0 w-32 h-32 rounded-3xl overflow-hidden border border-gray-100 dark:border-white/5 shadow-sm">
+                                                 <img src={`${ADMIN_URL}/${path}`} className="w-full h-full object-cover" />
+                                             </div>
+                                         ))}
+                                     </div>
+                                 </div>
+                             )}
+
+                             {isDeveloper ? (
+                                 <div className="space-y-6 animate-in fade-in duration-500">
+                                     <div className="grid grid-cols-2 gap-4">
+                                         <div className="space-y-3">
+                                             <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Update Status</label>
+                                             <select 
+                                                 value={editStatus}
+                                                 onChange={e => setEditStatus(e.target.value)}
+                                                 className="w-full bg-gray-50 dark:bg-zinc-900/50 border border-gray-100 dark:border-white/5 rounded-2xl py-4 px-6 text-[10px] font-black uppercase text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500/10 transition-all"
+                                             >
+                                                 <option value="pending">Pending</option>
+                                                 <option value="in_progress">In Progress</option>
+                                                 <option value="completed">Completed</option>
+                                             </select>
+                                         </div>
+                                         <div className="space-y-3">
+                                             <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Schedule</label>
+                                             <select 
+                                                 value={editSchedule}
+                                                 onChange={e => setEditSchedule(e.target.value)}
+                                                 className="w-full bg-gray-50 dark:bg-zinc-900/50 border border-gray-100 dark:border-white/5 rounded-2xl py-4 px-6 text-[10px] font-black uppercase text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500/10 transition-all"
+                                             >
+                                                 <option value="immediate">Immediate</option>
+                                                 <option value="nightly">Nightly Build</option>
+                                                 <option value="next_release">Next Release</option>
+                                             </select>
+                                         </div>
+                                     </div>
+
+                                     <div className="space-y-3">
+                                         <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Resolution Notes</label>
+                                         <textarea 
+                                             rows={4}
+                                             className="w-full bg-gray-50 dark:bg-zinc-900/50 border border-gray-100 dark:border-white/5 rounded-3xl py-4 px-6 text-sm font-medium text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500/10 transition-all resize-none italic"
+                                             placeholder="Explain the fix..."
+                                             value={editResponse}
+                                             onChange={e => setEditResponse(e.target.value)}
+                                         />
+                                     </div>
+
+                                     <button 
+                                         onClick={handleUpdateIssue}
+                                         disabled={isSubmitting}
+                                         className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-[28px] font-black text-[11px] uppercase tracking-widest shadow-2xl active:scale-95 disabled:opacity-30 transition-all"
+                                     >
+                                         {isSubmitting ? 'Syncing...' : 'Sync Updates'}
+                                     </button>
+                                 </div>
+                             ) : selectedIssue.admin_response && (
+                                 <div className="space-y-3">
+                                     <label className="text-[9px] font-black text-rose-500 uppercase ml-2">Developer Feedback</label>
+                                     <div className="p-6 bg-rose-500/5 dark:bg-rose-500/10 rounded-3xl border border-rose-500/10 text-sm text-gray-700 dark:text-zinc-300 italic">
+                                         {selectedIssue.admin_response}
+                                     </div>
+                                 </div>
+                             )}
                         </div>
                     </div>
                 </div>
@@ -360,49 +385,72 @@ const IssueManagementScreen: React.FC = () => {
 
             {/* Report Issue Modal */}
             {showReportModal && (
-                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-6">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowReportModal(false)}></div>
-                    <div className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-300">
-                        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-black w-full sm:max-w-md rounded-[48px] shadow-2xl overflow-hidden animate-slide-up border border-white dark:border-white/5 flex flex-col max-h-[90vh]">
+                        <header className="p-10 flex justify-between items-center shrink-0">
                             <div>
-                                <h3 className="font-black text-gray-900 dark:text-white text-lg">Report New Issue</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Found a bug or need a feature?</p>
+                                <h3 className="text-2xl font-light italic text-gray-900 dark:text-white">Report Issue</h3>
+                                <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mt-2">Help us improve the system</p>
                             </div>
-                            <button onClick={() => setShowReportModal(false)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                                <X size={20} className="text-gray-500" />
+                            <button onClick={() => setShowReportModal(false)} className="w-12 h-12 rounded-full bg-gray-50 dark:bg-zinc-900 text-gray-400 flex items-center justify-center active:scale-90 transition-all">
+                                <MdClose size={24}/>
                             </button>
-                        </div>
+                        </header>
                         
-                        <div className="p-6">
-                             <textarea 
-                                rows={6}
-                                autoFocus
-                                value={reportDescription}
-                                onChange={(e) => setReportDescription(e.target.value)}
-                                placeholder="Describe the issue in detail..."
-                                className="w-full bg-gray-50 dark:bg-gray-700 rounded-xl p-4 text-sm font-medium text-gray-900 dark:text-white border-2 border-transparent focus:border-indigo-500 outline-none resize-none placeholder:text-gray-400"
-                            />
-                        </div>
+                        <form onSubmit={handleReportIssue} className="flex-1 overflow-y-auto px-10 pb-10 no-scrollbar space-y-6">
+                            <div className="space-y-4">
+                                <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Describe what happened</label>
+                                <textarea 
+                                    required
+                                    autoFocus
+                                    rows={4}
+                                    className="w-full bg-gray-50 dark:bg-zinc-900/50 border border-gray-100 dark:border-white/5 rounded-[32px] py-6 px-8 text-lg font-light italic text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500/10 transition-all resize-none"
+                                    placeholder="The system says..."
+                                    value={reportDescription}
+                                    onChange={e => setReportDescription(e.target.value)}
+                                />
+                            </div>
 
-                        <div className="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 flex gap-3">
-                             <button 
-                                onClick={() => setShowReportModal(false)}
-                                className="flex-1 py-3.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-colors"
-                            >
-                                Cancel
-                            </button>
+                            <div className="space-y-4">
+                                <label className="text-[9px] font-black text-gray-400 uppercase ml-2">Add Proof (Optional)</label>
+                                <div className="flex flex-wrap gap-2">
+                                    <label className="w-16 h-16 rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-400 cursor-pointer hover:border-rose-500/30 transition-colors active:scale-95">
+                                        <MdAdd size={24} />
+                                        <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageChange} />
+                                    </label>
+                                    {selectedImages.map((file, i) => (
+                                        <div key={i} className="w-16 h-16 rounded-2xl overflow-hidden border border-gray-100 relative group">
+                                            <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" />
+                                            <button 
+                                                type="button"
+                                                onClick={() => setSelectedImages(prev => prev.filter((_, idx) => idx !== i))}
+                                                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <MdClose size={16} className="text-white" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
                             <button 
-                                onClick={handleReportIssue}
                                 disabled={isSubmitting || !reportDescription.trim()}
-                                className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                className="w-full h-16 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-[28px] font-black text-[11px] uppercase tracking-widest shadow-2xl active:scale-95 disabled:opacity-30 transition-all mt-4 flex items-center justify-center gap-3"
                             >
-                                {isSubmitting ? 'Sending...' : <><Send size={18} /> Submit Report</>}
+                                {isSubmitting ? 'Sending...' : <><MdSend size={18} /> Submit Report</>}
                             </button>
-                        </div>
+                        </form>
                     </div>
                 </div>
             )}
 
+            <style>{`
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .animate-fade-in { animation: fadeIn 0.2s ease-out; }
+                .animate-slide-up { animation: slideUp 0.3s ease-out; }
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+            `}</style>
         </div>
     );
 };

@@ -9,7 +9,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-require_once '../../common/db.php';
+// Database Access
+$dbPaths = [
+    __DIR__ . '/../../../common/db.php',
+    __DIR__ . '/../../common/db.php',
+    '/srv/http/admin/common/db.php'
+];
+
+$dbFound = false;
+foreach ($dbPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $dbFound = true;
+        break;
+    }
+}
+
+if (!$dbFound) {
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Database configuration not found']);
+    exit;
+}
 
 // STRICT BRANCH ISOLATION
 $employeeId = $_GET['employee_id'] ?? $_REQUEST['employee_id'] ?? $_SESSION['employee_id'] ?? null;
@@ -51,13 +71,18 @@ try {
     // Calculate Statistics (Overall)
     $statsSql = "SELECT 
         COUNT(*) as total,
-        SUM(CASE WHEN LOWER(status) IN ('ongoing', 'active') THEN 1 ELSE 0 END) as active,
-        SUM(CASE WHEN LOWER(status) IN ('discharged', 'completed') THEN 1 ELSE 0 END) as completed,
-        SUM(CASE WHEN LOWER(status) NOT IN ('ongoing', 'active', 'discharged', 'completed') THEN 1 ELSE 0 END) as inactive
+        SUM(CASE WHEN LOWER(status) IN ('ongoing', 'active', 'p', 'partially_paid') THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN LOWER(status) IN ('discharged', 'completed', 'f', 'fully_paid') THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN LOWER(status) NOT IN ('ongoing', 'active', 'p', 'partially_paid', 'discharged', 'completed', 'f', 'fully_paid') THEN 1 ELSE 0 END) as inactive,
+        SUM(total_amount) as total_gross,
+        SUM(due_amount) as total_due
     FROM patients WHERE branch_id = :branch_id";
     $stmtStats = $pdo->prepare($statsSql);
     $stmtStats->execute([':branch_id' => $branchId]);
     $stats = $stmtStats->fetch(PDO::FETCH_ASSOC);
+    
+    // Compute collection
+    $stats['total_collection'] = (float)$stats['total_gross'] - (float)$stats['total_due'];
 
     // Fetch patients
     $sql = "SELECT 

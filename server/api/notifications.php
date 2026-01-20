@@ -4,8 +4,48 @@ header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header('Content-Type: application/json');
 
-require_once '../../common/db.php';
-require_once '../../common/utils.php';
+// Database Access
+$dbPaths = [
+    __DIR__ . '/../../../common/db.php',
+    __DIR__ . '/../../common/db.php',
+    '/srv/http/admin/common/db.php'
+];
+
+$dbFound = false;
+foreach ($dbPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $dbFound = true;
+        break;
+    }
+}
+
+if (!$dbFound) {
+    echo json_encode(['status' => 'error', 'message' => 'Database configuration not found']);
+    exit;
+}
+
+// Utils
+if (file_exists('../../../common/utils.php')) {
+    require_once '../../../common/utils.php';
+} elseif (file_exists('../../common/utils.php')) {
+    require_once '../../common/utils.php';
+}
+
+// Include Push Logic
+// Include Push Logic
+$pushPaths = [
+    __DIR__ . '/../../../common/send_push.php',
+    __DIR__ . '/../../common/send_push.php',
+    '/srv/http/admin/common/send_push.php'
+];
+
+foreach ($pushPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        break;
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -101,6 +141,37 @@ try {
                 echo json_encode(['status' => 'success', 'message' => 'All notifications deleted']);
             } else {
                 echo json_encode(['status' => 'error', 'message' => 'Employee ID missing']);
+            }
+        } elseif ($action === 'send') {
+            // New Action: Send Notification (DB + Push)
+            $targetUserId = $input['target_user_id'] ?? 0;
+            $message = $input['message'] ?? '';
+            $link = $input['link_url'] ?? '';
+            $title = $input['title'] ?? 'New Notification';
+            $senderId = (isset($input['sender_id']) && $input['sender_id'] > 0) ? $input['sender_id'] : null;
+
+            if ($targetUserId && $message) {
+                // 0. Get branch_id for target user
+                $branchId = 1; // Default
+                $stmt = $pdo->prepare("SELECT branch_id FROM employees WHERE employee_id = ?");
+                $stmt->execute([$targetUserId]);
+                $userBranch = $stmt->fetchColumn();
+                if ($userBranch) $branchId = $userBranch;
+
+                // 1. Insert into DB
+                $stmt = $pdo->prepare("INSERT INTO notifications (employee_id, message, link_url, created_by_employee_id, branch_id, is_read, created_at) VALUES (?, ?, ?, ?, ?, 0, NOW())");
+                $stmt->execute([$targetUserId, $message, $link, $senderId, $branchId]);
+                
+                // 2. Send Push
+                $pushSent = sendDetailsNotification($targetUserId, $title, $message, ['link' => $link]);
+                
+                echo json_encode([
+                    'status' => 'success', 
+                    'message' => 'Notification sent',
+                    'push_sent' => $pushSent
+                ]);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Missing target_user_id or message']);
             }
         }
     }

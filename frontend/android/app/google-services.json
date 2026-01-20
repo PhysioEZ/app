@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "278679284480",
+    "project_id": "prospine-mobile",
+    "storage_bucket": "prospine-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:278679284480:android:0d8a6a2a0e94f6d497a1e5",
+        "android_client_info": {
+          "package_name": "com.physioez.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDtNhMSUejplMBfaRBduCQfAGCVTgvaAkA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

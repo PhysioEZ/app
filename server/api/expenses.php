@@ -190,6 +190,26 @@ try {
             $payment_method,
             $status
         ]);
+        $newExpenseId = $pdo->lastInsertId();
+
+        // --- Notification for Admin (Match Web App Logic) ---
+        if ($status === 'pending') {
+            require_once '../../common/logger.php'; // Ensure helper is available
+            
+            // Fetch username if not set, or use "Mobile User"
+            $username = "Mobile User";
+            if ($userId) {
+                $uStmt = $pdo->prepare("SELECT CONCAT(first_name, ' ', last_name) FROM employees WHERE employee_id = ?");
+                $uStmt->execute([$userId]);
+                $username = $uStmt->fetchColumn() ?: "User #$userId";
+            }
+
+            $message = "New high-value expense req: {$amount} ({$voucher_no}) from {$username}.";
+            $link = "manage_expenses.php?search=" . $voucher_no;
+            
+            // Notify Admins
+            create_notification_for_roles($pdo, $branchId, ['admin', 'superadmin'], $message, $link, $userId);
+        }
 
         echo json_encode([
             'status' => 'success',
