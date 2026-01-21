@@ -12,8 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Database Access
 $dbPaths = [
     __DIR__ . '/../../../common/db.php',
-    __DIR__ . '/../../common/db.php',
-    '/srv/http/admin/common/db.php'
+    __DIR__ . '/../../common/db.php'
 ];
 
 $dbFound = false;

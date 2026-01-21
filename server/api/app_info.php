@@ -16,10 +16,10 @@ $response = [
     'status' => 'success',
     'data' => [
         'releases' => [
-            // LATEST RELEASE (v3.1.0)
+            // LATEST RELEASE (v3.2.0)
             [
-                'version' => '3.1.0',
-                'date' => 'Jan 20, 2026',
+                'version' => '3.2.0',
+                'date' => 'Jan 22, 2026',
                 'description' => 'Complete Material Design 3 UI Overhaul: Premium card-based layouts, enhanced visual hierarchy, and comprehensive dark mode support across all screens.',
                 'features' => [
                     ['title' => 'Material Design 3', 'desc' => 'Complete UI redesign with Google Material You design system'],
@@ -30,6 +30,9 @@ $response = [
                     ['title' => 'Patient Profile', 'desc' => 'Redesigned Details tab with premium card structure'],
                     ['title' => 'User Profile', 'desc' => 'Enhanced layout with contact cards & branch info'],
                     ['title' => 'Icon System', 'desc' => 'Migrated to Material Design Icons (react-icons/md)'],
+                    ['title' => 'Developer Mode', 'desc' => 'Advanced Maintenance Mode Bypass & Granular Role Access'],
+                    ['title' => 'Dev Dashboard', 'desc' => 'New categorized menu with Theme Toggle & Secure Logout'],
+                    ['title' => 'System Core', 'desc' => 'Robust header parsing & fail-safe API authentication logic'],
                 ]
             ],
             // PREVIOUS RELEASE (v2.5.0)

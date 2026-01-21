@@ -20,6 +20,28 @@ if ((window as any).Capacitor?.isNativePlatform()) {
   setSafeArea();
 }
 
+// Global Fetch Interceptor for System Status
+const { fetch: originalFetch } = window;
+window.fetch = async (...args) => {
+  const response = await originalFetch(...args);
+  
+  if (response.status === 503 || response.status === 401) {
+    const clone = response.clone();
+    try {
+      const data = await clone.json();
+      if (data.status === 'maintenance') {
+        window.location.hash = `/status?type=maintenance&message=${encodeURIComponent(data.message)}`;
+      } else if (data.force_logout) {
+        window.location.hash = `/status?type=logout&message=${encodeURIComponent(data.message)}`;
+      }
+    } catch (e) {
+      // Not JSON or other error
+    }
+  }
+  return response;
+};
+
+
 CapacitorApp.addListener('backButton', ({ canGoBack }) => {
   if (!canGoBack) {
     CapacitorApp.exitApp();

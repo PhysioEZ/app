@@ -36,6 +36,9 @@ if (!$dbFound) {
     exit;
 }
 
+// Load auth logger
+require_once __DIR__ . '/../../../common/auth_logger.php';
+
 // 3. Get Input
 $data = json_decode(file_get_contents("php://input"));
 
@@ -76,6 +79,32 @@ try {
 
     // 5. Verify Password
     if ($user && password_verify($password, $user['password_hash'])) {
+        // --- Maintenance Mode Check ---
+        $stmtMaint = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'maintenance_mode'");
+        $maintenanceMode = $stmtMaint->fetchColumn() === '1';
+
+        if ($maintenanceMode && strtolower($user['role_name'] ?? '') !== 'developer') {
+             $stmtMsg = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'maintenance_message'");
+             $msg = $stmtMsg->fetchColumn() ?: 'System is currently under maintenance. Please try again later.';
+             
+             http_response_code(503);
+             echo json_encode(["status" => "error", "message" => $msg]);
+             exit;
+        }
+
+        // Sync Auth Version
+        $stmtVer = $pdo->query("SELECT setting_value FROM system_settings WHERE setting_key = 'min_auth_version'");
+        $minVer = (int)$stmtVer->fetchColumn() ?: 1;
+        
+        $stmtSync = $pdo->prepare("UPDATE employees SET auth_version = ? WHERE employee_id = ?");
+        $stmtSync->execute([$minVer, $user['employee_id']]);
+        $user['auth_version'] = $minVer;
+        
+        // Log successful login
+        log_auth_event($pdo, 'mobile_login_success', $user['employee_id'], $username, true, [
+            'role' => $user['role_name'],
+            'branch_id' => $user['branch_id']
+        ]);
         
         // Success!
         // Remove sensitive data
@@ -103,6 +132,11 @@ try {
         ]);
 
     } else {
+        // Log failed login
+        log_auth_event($pdo, 'mobile_login_failed', null, $username, false, [
+            'reason' => 'invalid_credentials'
+        ]);
+        
         http_response_code(401);
         echo json_encode(["status" => "error", "message" => "Invalid email or password."]);
     }

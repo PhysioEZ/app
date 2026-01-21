@@ -119,16 +119,32 @@ try {
         }
 
         $pdo->commit();
+
+        // --- Notification for Developers (Global) ---
+        try {
+            require_once '../../../common/logger.php';
+            $notifMsg = "New Admin/Staff Issue #$issueId: " . (strlen($description) > 50 ? substr($description, 0, 47) . '...' : $description);
+            create_notification_for_roles_global($pdo, ['developer'], $notifMsg, "support", $userId);
+        } catch (Exception $e) {
+            error_log("Admin Issue Notification Error: " . $e->getMessage());
+        }
+
         echo json_encode(['status' => 'success']);
 
     } elseif ($action === 'update_issue') {
-        $issueId = $input['issue_id'] ?? 0;
-        $userId = $input['user_id'] ?? 0; // Added user_id to verification
-        $status = $input['status'] ?? '';
-        $adminResponse = $input['admin_response'] ?? '';
-        $releaseSchedule = $input['release_schedule'] ?? '';
+        // Handle both JSON and FormData
+        $issueId = $_POST['issue_id'] ?? $input['issue_id'] ?? 0;
+        $userId = $_POST['user_id'] ?? $input['user_id'] ?? 0;
+        $status = $_POST['status'] ?? $input['status'] ?? '';
+        $adminResponse = $_POST['admin_response'] ?? $input['admin_response'] ?? '';
+        $releaseSchedule = $_POST['release_schedule'] ?? $input['release_schedule'] ?? '';
 
         if (!$issueId) throw new Exception("Issue ID required");
+
+        // Fetch original issue to know who to notify
+        $stmtOrig = $pdo->prepare("SELECT reported_by, branch_id FROM system_issues WHERE issue_id = ?");
+        $stmtOrig->execute([$issueId]);
+        $orig = $stmtOrig->fetch();
 
         // Verify again that this user is a developer
         $stmtV = $pdo->prepare("SELECT job_title FROM employees WHERE employee_id = ?");
@@ -144,6 +160,49 @@ try {
             WHERE issue_id = ?
         ");
         $stmt->execute([$status, $adminResponse, $releaseSchedule, $issueId]);
+
+        // Handle File Uploads (Developer Attachments)
+        if (isset($_FILES['images'])) {
+            $uploadDir = '../../../../uploads/issues/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+
+            foreach ($_FILES['images']['tmp_name'] as $key => $tmpName) {
+                if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
+                    $name = $_FILES['images']['name'][$key];
+                    $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+                    $newFileName = 'dev_reply_' . $issueId . '_' . uniqid() . '.' . $ext;
+                    $dest = $uploadDir . $newFileName;
+
+                    if (move_uploaded_file($tmpName, $dest)) {
+                        $stmtImg = $pdo->prepare("INSERT INTO issue_attachments (issue_id, file_path) VALUES (?, ?)");
+                        $stmtImg->execute([$issueId, 'uploads/issues/' . $newFileName]);
+                    }
+                }
+            }
+        }
+
+        // --- Notification for Original Reporter ---
+        if ($orig && $orig['reported_by']) {
+            try {
+                require_once '../../../common/logger.php';
+                require_once '../../../common/send_push.php';
+                
+                $reporterId = (int)$orig['reported_by'];
+                $branchId = (int)$orig['branch_id'];
+                $statusStr = str_replace('_', ' ', ucfirst($status));
+                $notifMsg = "Your Issue #$issueId has been updated to '$statusStr'";
+                if ($adminResponse) $notifMsg .= ": " . (strlen($adminResponse) > 50 ? substr($adminResponse, 0, 47) . '...' : $adminResponse);
+
+                // 1. DB Notification
+                $stNotif = $pdo->prepare("INSERT INTO notifications (employee_id, branch_id, message, link_url, created_by_employee_id, created_at) VALUES (?, ?, ?, 'support', ?, NOW())");
+                $stNotif->execute([$reporterId, $branchId, $notifMsg, $userId]);
+
+                // 2. Push Notification
+                sendDetailsNotification($reporterId, "Issue Updated", $notifMsg, ['link' => 'support']);
+            } catch (Exception $e) {
+                error_log("Issue Update Notification Error: " . $e->getMessage());
+            }
+        }
 
         echo json_encode(['status' => 'success']);
 

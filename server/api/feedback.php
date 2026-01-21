@@ -123,6 +123,19 @@ try {
 
         $pdo->commit();
 
+        // --- Notification for Branch Admins ---
+        try {
+            require_once '../../common/logger.php';
+            $pStmt = $pdo->prepare("SELECT patient_name FROM registration r JOIN patients p ON r.registration_id = p.registration_id WHERE p.patient_id = ?");
+            $pStmt->execute([$patientId]);
+            $pName = $pStmt->fetchColumn() ?: "Patient";
+
+            $notifMsg = "New $feedbackType Feedback from $pName: " . (strlen($comments) > 50 ? substr($comments, 0, 47) . '...' : $comments);
+            create_notification_for_roles($pdo, $branchId, ['admin'], $notifMsg, "feedback", $userId);
+        } catch (Exception $e) {
+            error_log("Feedback Notification Error: " . $e->getMessage());
+        }
+
         echo json_encode([
             'status' => 'success',
             'message' => 'Feedback saved and patient status updated.'

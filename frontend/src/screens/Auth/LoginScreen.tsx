@@ -227,7 +227,7 @@ const LoginScreen: React.FC = () => {
           
           <div className="flex flex-col items-center space-y-2">
              <span className="px-3 py-1 rounded-full bg-surface-variant/50 text-on-surface-variant text-[11px] font-mono tracking-wider">
-               v2.5.0
+               v3.2.0
              </span>
              
              <p className="text-sm font-medium tracking-wide text-on-surface-variant">

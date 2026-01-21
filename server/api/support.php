@@ -128,6 +128,22 @@ try {
         }
 
         $pdo->commit();
+
+        // --- Notification for Developers (Global) ---
+        try {
+            require_once '../../common/logger.php';
+            $username = "User #$userId";
+            $uStmt = $pdo->prepare("SELECT first_name FROM employees WHERE employee_id = ?");
+            $uStmt->execute([$userId]);
+            $uName = $uStmt->fetchColumn();
+            if ($uName) $username = $uName;
+
+            $notifMsg = "New Issue #$issueId from $username: " . (strlen($description) > 50 ? substr($description, 0, 47) . '...' : $description);
+            create_notification_for_roles_global($pdo, ['developer'], $notifMsg, "support", $userId);
+        } catch (Exception $e) {
+            error_log("Issue Notification Error: " . $e->getMessage());
+        }
+
         echo json_encode(['status' => 'success', 'message' => 'Issue submitted successfully']);
     }
 

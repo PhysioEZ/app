@@ -142,6 +142,16 @@ try {
     }
 
     $pdo->commit();
+
+    // --- Notification for Branch Admins ---
+    try {
+        require_once __DIR__ . '/../../common/logger.php';
+        $notifMsg = "New Patient Registered: $patient_name ($consultation_type)";
+        create_notification_for_roles($pdo, $branch_id, ['admin'], $notifMsg, "registrations", $employee_id);
+    } catch (Exception $e) {
+        error_log("Registration Notification Error: " . $e->getMessage());
+    }
+
     echo json_encode([
         "status" => "success",
         "message" => "Registration created successfully",

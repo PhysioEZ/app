@@ -1,6 +1,6 @@
 {
-    "version": "3.1.0",
-    "url": "https://prospine.in/download/app.html",
+    "version": "3.2.0",
+    "url": "https://prospine.in/download/",
     "force_update": true,
-    "notes": "Performance improvements and bug fixes."
+    "notes": "Complete Material Design 3 UI Overhaul and comprehensive dark mode support."
 }
