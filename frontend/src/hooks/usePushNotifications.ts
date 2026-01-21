@@ -9,57 +9,70 @@ import {
 import { Capacitor } from '@capacitor/core';
 import { useAuthStore } from '../store/useAuthStore';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://prospine.in/admin/mobile/api';
 
 export const usePushNotifications = () => {
     const { user } = useAuthStore();
 
     useEffect(() => {
-        if (!user) return;
+        console.log("PUSH_DEBUG: Hook triggered, user:", user?.email);
+        if (!user) {
+            console.log("PUSH_DEBUG: No user, skipping.");
+            return;
+        }
         
-        // Push Notifications only work on native devices (Android/iOS)
         if (!Capacitor.isNativePlatform()) {
-            console.log("Push Notifications: Skipped (Not native platform)");
+            console.log("PUSH_DEBUG: Not a native platform, skipping.");
             return;
         }
 
         const registerPush = async () => {
+            console.log("PUSH_DEBUG: Checking permissions...");
             let permStatus = await PushNotifications.checkPermissions();
 
             if (permStatus.receive === 'prompt') {
+                console.log("PUSH_DEBUG: Requesting permissions...");
                 permStatus = await PushNotifications.requestPermissions();
             }
 
             if (permStatus.receive !== 'granted') {
-                console.warn("Push Notifications: Permission denied");
+                console.warn("PUSH_DEBUG: Permission denied");
                 return;
             }
 
+            console.log("PUSH_DEBUG: Registering with FCM...");
             await PushNotifications.register();
         };
 
         const addListeners = async () => {
+            console.log("PUSH_DEBUG: Adding listeners...");
             await PushNotifications.removeAllListeners();
 
-            // Registration Success: Send token to backend
             await PushNotifications.addListener('registration', async (token: Token) => {
-                console.log('Push Registration Token:', token.value);
+                console.log('PUSH_DEBUG: Registration Success. Token:', token.value);
                 try {
-                    const empId = (user as any).employee_id || user.id;
-                    console.log(`Push Notifications: Attempting to save token for user ${empId} to ${API_URL}/save_token.php`);
+                    const empId = (user as any).employee_id;
+                    if (!empId) {
+                        console.warn("PUSH_DEBUG: No employee_id found for user.");
+                        return;
+                    }
+
+                    const payload = {
+                        user_id: empId,
+                        token: token.value,
+                        platform: Capacitor.getPlatform()
+                    };
+                    console.log(`PUSH_DEBUG: Sending to ${API_URL}/save_token.php`, payload);
+
                     const response = await fetch(`${API_URL}/save_token.php`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            user_id: empId,
-                            token: token.value,
-                            platform: Capacitor.getPlatform()
-                        })
+                        body: JSON.stringify(payload)
                     });
                     const result = await response.json();
-                    console.log("Push Notifications: Save result:", JSON.stringify(result));
+                    console.log("PUSH_DEBUG: Server response:", JSON.stringify(result));
                 } catch (error) {
-                    console.error("Push Notifications: Failed to save push token", error);
+                    console.error("PUSH_DEBUG: Failed to save push token", error);
                 }
             });
 

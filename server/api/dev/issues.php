@@ -10,12 +10,14 @@ header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 require_once '../../../common/db.php';
+require_once '../../../common/logger.php';
+require_once '../../../common/push_utils.php';
 
 $action = $_GET['action'] ?? '';
 $input = json_decode(file_get_contents('php://input'), true);
 
 if (empty($action)) {
-    $action = $input['action'] ?? '';
+    $action = $input['action'] ?? $_POST['action'] ?? '';
 }
 
 try {
@@ -77,60 +79,6 @@ try {
 
         echo json_encode(['status' => 'success', 'data' => $issues, 'is_developer' => $isDeveloper]);
 
-    } elseif ($action === 'report_issue') {
-        // Handle both JSON and FormData
-        $userId = $_POST['user_id'] ?? $input['user_id'] ?? 0;
-        $description = $_POST['description'] ?? $input['description'] ?? '';
-
-        if (empty($description)) throw new Exception("Description is required");
-
-        $pdo->beginTransaction();
-
-        // Get branch_id
-        $stmtB = $pdo->prepare("SELECT branch_id FROM employees WHERE employee_id = ?");
-        $stmtB->execute([$userId]);
-        $branchId = $stmtB->fetchColumn() ?: 1;
-
-        $stmt = $pdo->prepare("
-            INSERT INTO system_issues (branch_id, reported_by, description, status, release_schedule)
-            VALUES (?, ?, ?, 'pending', 'next_release')
-        ");
-        $stmt->execute([$branchId, $userId, $description]);
-        $issueId = $pdo->lastInsertId();
-
-        // Handle File Uploads
-        if (isset($_FILES['images'])) {
-            $uploadDir = '../../../../uploads/issues/';
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-
-            foreach ($_FILES['images']['tmp_name'] as $key => $tmpName) {
-                if ($_FILES['images']['error'][$key] === UPLOAD_ERR_OK) {
-                    $name = $_FILES['images']['name'][$key];
-                    $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-                    $newFileName = 'issue_' . $issueId . '_' . uniqid() . '.' . $ext;
-                    $dest = $uploadDir . $newFileName;
-
-                    if (move_uploaded_file($tmpName, $dest)) {
-                        $stmtImg = $pdo->prepare("INSERT INTO issue_attachments (issue_id, file_path) VALUES (?, ?)");
-                        $stmtImg->execute([$issueId, 'uploads/issues/' . $newFileName]);
-                    }
-                }
-            }
-        }
-
-        $pdo->commit();
-
-        // --- Notification for Developers (Global) ---
-        try {
-            require_once '../../../common/logger.php';
-            $notifMsg = "New Admin/Staff Issue #$issueId: " . (strlen($description) > 50 ? substr($description, 0, 47) . '...' : $description);
-            create_notification_for_roles_global($pdo, ['developer'], $notifMsg, "support", $userId);
-        } catch (Exception $e) {
-            error_log("Admin Issue Notification Error: " . $e->getMessage());
-        }
-
-        echo json_encode(['status' => 'success']);
-
     } elseif ($action === 'update_issue') {
         // Handle both JSON and FormData
         $issueId = $_POST['issue_id'] ?? $input['issue_id'] ?? 0;
@@ -181,12 +129,9 @@ try {
             }
         }
 
-        // --- Notification for Original Reporter ---
+        // --- Notification Logic for Original Reporter ---
         if ($orig && $orig['reported_by']) {
             try {
-                require_once '../../../common/logger.php';
-                require_once '../../../common/send_push.php';
-                
                 $reporterId = (int)$orig['reported_by'];
                 $branchId = (int)$orig['branch_id'];
                 $statusStr = str_replace('_', ' ', ucfirst($status));
@@ -198,9 +143,9 @@ try {
                 $stNotif->execute([$reporterId, $branchId, $notifMsg, $userId]);
 
                 // 2. Push Notification
-                sendDetailsNotification($reporterId, "Issue Updated", $notifMsg, ['link' => 'support']);
+                sendDetailsNotification($reporterId, "Issue Updated", $notifMsg, ['link' => 'support'], $pdo);
             } catch (Exception $e) {
-                error_log("Issue Update Notification Error: " . $e->getMessage());
+                error_log("Dev Issue Update Notification Error: " . $e->getMessage());
             }
         }
 

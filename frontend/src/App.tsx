@@ -43,17 +43,38 @@ import AdminPatientsScreen from './screens/Admin/Patients/PatientsScreen';
 import ReceptionSettingsScreen from './screens/Admin/Settings/ReceptionSettingsScreen';
 import SystemRecordsScreen from './screens/Admin/Records/SystemRecordsScreen';
 import AdminReportsScreen from './screens/Admin/Reports/ReportsScreen';
+import DevDashboard from './screens/Dev/DevDashboard';
+import DevBroadcastScreen from './screens/Dev/BroadcastScreen';
+import DevMenuScreen from './screens/Dev/DevMenuScreen';
+import LogsScreen from './screens/Dev/LogsScreen';
+import DbSchemaScreen from './screens/Dev/DbSchemaScreen';
+import ConsoleScreen from './screens/Dev/ConsoleScreen';
+import TableManagementScreen from './screens/Dev/TableManagementScreen';
+import IPBlacklistScreen from './screens/Dev/IPBlacklistScreen';
+import AuthAuditScreen from './screens/Dev/AuthAuditScreen';
+import TrafficTrackerScreen from './screens/Dev/TrafficTrackerScreen';
+import AuditLogsScreen from './screens/Dev/AuditLogsScreen';
+import DevChatScreen from './screens/Dev/DevChatScreen';
+import DevProfileScreen from './screens/Dev/DevProfileScreen';
 import UpdateModal from './components/UpdateModal';
+import DevIssueScreen from './screens/Dev/DevIssueScreen';
+import RemoteControlScreen from './screens/Dev/RemoteControlScreen';
 import { useAuthStore } from './store/useAuthStore';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import SystemStatusScreen from './screens/Status/SystemStatusScreen';
+import SentryScreen from './screens/Dev/SentryScreen';
+import SystemInfoScreen from './screens/Dev/SystemInfoScreen';
 
 // App Version
-const CURRENT_VERSION = '3.0.0';
+const CURRENT_VERSION = '3.2.0';
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.69/admin/app/server/api';
 
 // Helper for Role-based redirection
 const RootRedirect = () => {
     const user = useAuthStore((state) => state.user);
+    if (user?.role === 'developer') {
+        return <Navigate to="/dev/dashboard" replace />;
+    }
     if (user?.role === 'admin' || user?.role === 'superadmin') {
         return <Navigate to="/admin/dashboard" replace />;
     }
@@ -135,6 +156,7 @@ function App() {
           path="/login" 
           element={!isAuthenticated ? <LoginScreen /> : <RootRedirect />} 
         />
+        <Route path="/status" element={<SystemStatusScreen />} />
 
         {/* Protected Routes */}
         {/* Admin Routes */}
@@ -161,6 +183,28 @@ function App() {
             <Route path="/admin/menu" element={<AdminMenuScreen />} />
             <Route path="/admin/records" element={<SystemRecordsScreen />} />
             <Route path="/admin/reports" element={<AdminReportsScreen />} />
+        </Route>
+
+        {/* Modular Developer Workspace */}
+        <Route element={<AdminLayout />}>
+           <Route path="/dev/dashboard" element={<DevDashboard />} />
+           <Route path="/dev/broadcast" element={<DevBroadcastScreen />} />
+           <Route path="/dev/logs" element={<LogsScreen />} />
+           <Route path="/dev/audit" element={<AuditLogsScreen />} />
+           <Route path="/dev/db" element={<DbSchemaScreen />} />
+           <Route path="/dev/console" element={<ConsoleScreen />} />
+           <Route path="/dev/tables" element={<TableManagementScreen />} />
+           <Route path="/dev/traffic" element={<TrafficTrackerScreen />} />
+           <Route path="/dev/blacklist" element={<IPBlacklistScreen />} />
+           <Route path="/dev/auth-audit" element={<AuthAuditScreen />} />
+           <Route path="/dev/chat" element={<DevChatScreen />} />
+           <Route path="/dev/chat/:id" element={<DevChatScreen />} />
+           <Route path="/dev/issues" element={<DevIssueScreen />} />
+           <Route path="/dev/menu" element={<DevMenuScreen />} />
+           <Route path="/dev/profile" element={<DevProfileScreen />} />
+           <Route path="/dev/remote" element={<RemoteControlScreen />} />
+           <Route path="/dev/sentry" element={<SentryScreen />} />
+           <Route path="/dev/info" element={<SystemInfoScreen />} />
         </Route>
 
         {/* Reception/Staff Routes */}

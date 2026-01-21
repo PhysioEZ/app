@@ -208,7 +208,7 @@ try {
             $link = "manage_expenses.php?search=" . $voucher_no;
             
             // Notify Admins
-            create_notification_for_roles($pdo, $branchId, ['admin', 'superadmin'], $message, $link, $userId);
+            create_notification_for_roles($pdo, $branchId, ['admin'], $message, $link, $userId);
         }
 
         echo json_encode([
