@@ -49,28 +49,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // NOTE: Running this once will clear old tokens.
         // $pdo->exec("DROP TABLE IF EXISTS user_device_tokens"); // Uncomment if you want to force reset schema
 
-        // Ensure Table has employee_id column
-        // We will ALtER if not exists or create new
-        $pdo->exec("CREATE TABLE IF NOT EXISTS user_device_tokens (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            employee_id INT NOT NULL,
-            token VARCHAR(512) NOT NULL,
-            platform VARCHAR(50) DEFAULT 'android',
-            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY unique_emp_token (employee_id, token)
-        )");
+        // Table schema is now verified/fixed via external scripts.
+        // Skipping CREATE TABLE check for performance.
         
-        // Check if user_id column exists (from old schema) and drop it or migrate?
+        // Check if employee_id column exists (from old schema) and drop it or migrate?
         // For now, let's just use the table. If it fails, we might need a manual ALTER or DROP.
         // Assuming strict 'remove anything related to users table' -> we should probably focus on fresh start.
         
         // Simplest strategy for strict compliance:
-        // Delete rows with this token first to avoid duplicates across IDs?
+        // Delete rows with this token first to avoid duplicates across IDs (optional, but safe)
         $pdo->prepare("DELETE FROM user_device_tokens WHERE token = ?")->execute([$token]);
 
         $stmt = $pdo->prepare("
-            INSERT INTO user_device_tokens (employee_id, token, platform) 
-            VALUES (:eid, :token, :platform)
+            INSERT INTO user_device_tokens (employee_id, token, platform, created_at) 
+            VALUES (:eid, :token, :platform, NOW())
             ON DUPLICATE KEY UPDATE platform = VALUES(platform), last_updated = NOW()
         ");
         

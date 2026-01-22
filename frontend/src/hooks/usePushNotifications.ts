@@ -14,7 +14,46 @@ const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://prospine.in/admin/
 export const usePushNotifications = () => {
     const { user } = useAuthStore();
 
+    const syncPendingToken = async () => {
+        const pending = localStorage.getItem('pending_push_token');
+        if (!pending || !user) return;
+
+        try {
+            const tokenVal = pending;
+            const empId = (user as any).employee_id || user.id;
+            
+            if (!empId) return;
+
+            console.log(`PUSH_DEBUG: Retrying sync for ${empId}`);
+            
+            const payload = {
+                user_id: empId,
+                token: tokenVal,
+                platform: Capacitor.getPlatform()
+            };
+
+            const response = await fetch(`${API_URL}/save_token.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const result = await response.json();
+            if (result.status === 'success') {
+                console.log("PUSH_DEBUG: Sync successful, clearing pending.");
+                localStorage.removeItem('pending_push_token');
+            } else {
+                console.warn("PUSH_DEBUG: Server rejected token", result);
+            }
+        } catch (e) {
+            console.error("PUSH_DEBUG: Retry sync failed", e);
+        }
+    };
+
     useEffect(() => {
+        // Try to sync any pending token on mount
+        if (user) syncPendingToken();
+
         console.log("PUSH_DEBUG: Hook triggered, user:", user?.email);
         if (!user) {
             console.log("PUSH_DEBUG: No user, skipping.");
@@ -50,8 +89,12 @@ export const usePushNotifications = () => {
 
             await PushNotifications.addListener('registration', async (token: Token) => {
                 console.log('PUSH_DEBUG: Registration Success. Token:', token.value);
+                
+                // BACKUP: Save to local storage immediately
+                localStorage.setItem('pending_push_token', token.value);
+
                 try {
-                    const empId = (user as any).employee_id;
+                    const empId = (user as any).employee_id || user.id;
                     if (!empId) {
                         console.warn("PUSH_DEBUG: No employee_id found for user.");
                         return;
@@ -71,8 +114,13 @@ export const usePushNotifications = () => {
                     });
                     const result = await response.json();
                     console.log("PUSH_DEBUG: Server response:", JSON.stringify(result));
+                    
+                    if (result.status === 'success') {
+                        localStorage.removeItem('pending_push_token');
+                    }
                 } catch (error) {
                     console.error("PUSH_DEBUG: Failed to save push token", error);
+                    // It remains in localStorage for the next retry (syncPendingToken)
                 }
             });
 
@@ -84,15 +132,11 @@ export const usePushNotifications = () => {
             // Notification Received (Foreground)
             await PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
                 console.log('Push Received:', notification);
-                // Optionally trigger the "Ping" sound/vibration here too if you want
-                // But typically the OS handles the sound if configured in the payload
             });
 
             // Notification Tapped (Background -> Foreground)
             await PushNotifications.addListener('pushNotificationActionPerformed', (notification: ActionPerformed) => {
                 console.log('Push Action:', notification.actionId, notification.inputValue);
-                // Navigate to specific screen if needed
-                // e.g., window.location.href = '/admin/notifications';
             });
         };
 
@@ -110,6 +154,13 @@ export const usePushNotifications = () => {
              }
         };
 
+    }, [user]);
+
+    // Retry Interval
+    useEffect(() => {
+        if (!user) return;
+        const interval = setInterval(syncPendingToken, 30000); // Retry every 30s if pending
+        return () => clearInterval(interval);
     }, [user]);
 
     return {};

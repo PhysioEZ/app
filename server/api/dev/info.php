@@ -120,13 +120,22 @@ try {
     ];
 
     // 1. Fetch Traffic (Last 5)
-    $trafficFile = __DIR__ . '/traffic.json';
+    // Fix: Point to common/traffic.json where db.php writes
+    $trafficFile = dirname(__FILE__) . '/../../../common/traffic.json';
     if (file_exists($trafficFile)) {
         $traffic = json_decode(file_get_contents($trafficFile), true) ?: [];
         $stats['traffic'] = array_slice($traffic, 0, 5);
     }
 
-    // 2. Fetch Logs (Last 5)
+    // 2. Fetch Issues Pending
+    try {
+        $stmtIssues = $pdo->query("SELECT COUNT(*) FROM system_issues WHERE status = 'pending'");
+        $stats['issues_count'] = (int)$stmtIssues->fetchColumn();
+    } catch (Exception $e) {
+        $stats['issues_count'] = 0;
+    }
+
+    // 3. Fetch Logs (Last 5)
     $logFile = '/home/u861850327/.logs/error_log_prospine_in';
     if (file_exists($logFile)) {
         $handle = fopen($logFile, 'r');

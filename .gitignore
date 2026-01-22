@@ -36,3 +36,7 @@ yarn-error.log*
 
 # Dependencies
 /vendor/
+frontend/android/app/my-release-key.keystore
+frontend/android/app/my-release-key.keystore.bak
+frontend/android/app/my-release-key.keystore.old
+frontend/android/app/my-release-key.keystore
